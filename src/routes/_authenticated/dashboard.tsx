@@ -655,11 +655,11 @@ function SortableSensorGrid({
     return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 2, h: 2 } : { w: 3, h: 3 };
   };
 
-  const [layout, setLayout] = useState<Layout[]>(() => {
+  const [layout, setLayout] = useState<LayoutItem[]>(() => {
     if (typeof window === "undefined") return [];
     try {
       const raw = window.localStorage.getItem(storageKey);
-      return raw ? (JSON.parse(raw) as Layout[]) : [];
+      return raw ? (JSON.parse(raw) as LayoutItem[]) : [];
     } catch {
       return [];
     }
@@ -672,14 +672,14 @@ function SortableSensorGrid({
   }, [layout, storageKey]);
 
   // Merge saved layout with sensors: keep saved positions, append new sensors
-  const effectiveLayout: Layout[] = useMemo(() => {
+  const effectiveLayout: LayoutItem[] = useMemo(() => {
     const byId = new Map(layout.map((l) => [l.i, l]));
     const rankBase: Record<SensorView, number> = { graph: 0, numeric: 1, button: 2 };
     const sorted = [...sensors].sort((a, b) => rankBase[a.view] - rankBase[b.view]);
     // find bottom row
     let nextY = layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
     let nextX = 0;
-    const out: Layout[] = [];
+    const out: LayoutItem[] = [];
     for (const s of sorted) {
       const existing = byId.get(s.id);
       if (existing) {
