@@ -512,7 +512,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <div className="glass-frame grid grid-cols-3 sm:grid-cols-4 gap-2 max-w-3xl mx-auto">
+        <div className={`glass-frame grid mx-auto ${compact ? "grid-cols-4 sm:grid-cols-6 gap-1.5 max-w-2xl" : "grid-cols-2 sm:grid-cols-3 gap-3 max-w-3xl"}`}>
           {[...sensors]
             .sort((a, b) => {
               const order = { graph: 0, numeric: 1, button: 2 } as const;
