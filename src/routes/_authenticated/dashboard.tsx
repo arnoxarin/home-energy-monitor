@@ -702,44 +702,39 @@ function SortableSensorGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout, sensors, cols, compact]);
 
-  const [containerRef, width] = useContainerWidth();
-
   const sensorMap = useMemo(() => new Map(sensors.map((s) => [s.id, s])), [sensors]);
 
   return (
     <div
-      ref={containerRef}
       className={`glass-frame mx-auto ${compact ? "max-w-3xl" : "max-w-4xl"} ${editing ? "ring-2 ring-primary/40" : ""}`}
     >
-      {width > 0 && (
-        <GridLayout
-          className="layout"
-          layout={effectiveLayout}
-          cols={cols}
-          rowHeight={width / cols - 8}
-          width={width - 24}
-          margin={[8, 8]}
-          isDraggable={editing}
-          isResizable={editing}
-          compactType="vertical"
-          onLayoutChange={(next) => {
-            if (editing) setLayout(next);
-          }}
-        >
-          {effectiveLayout.map((l) => {
-            const s = sensorMap.get(l.i);
-            if (!s) return <div key={l.i} />;
-            return (
-              <div key={l.i} className={editing ? "cursor-move" : ""}>
-                <SensorCard sensor={s} />
-              </div>
-            );
-          })}
-        </GridLayout>
-      )}
+      <ResponsiveGrid
+        className="layout"
+        layout={effectiveLayout as Layout[]}
+        cols={cols}
+        rowHeight={compact ? 60 : 90}
+        margin={[8, 8]}
+        isDraggable={editing}
+        isResizable={editing}
+        compactType="vertical"
+        onLayoutChange={(next: Layout[]) => {
+          if (editing) setLayout(next);
+        }}
+      >
+        {effectiveLayout.map((l) => {
+          const s = sensorMap.get(l.i);
+          if (!s) return <div key={l.i} />;
+          return (
+            <div key={l.i} className={editing ? "cursor-move" : ""}>
+              <SensorCard sensor={s} />
+            </div>
+          );
+        })}
+      </ResponsiveGrid>
     </div>
   );
 }
+
 
 
 function SensorCard({ sensor }: { sensor: Sensor }) {
