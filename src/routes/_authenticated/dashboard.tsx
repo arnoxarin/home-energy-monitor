@@ -150,9 +150,6 @@ function Dashboard() {
             <Link to="/devices">
               <Button variant="outline" size="sm">Devices</Button>
             </Link>
-            <Link to="/sensors/new">
-              <Button variant="outline" size="sm">Add sensor</Button>
-            </Link>
             <AddDeviceDialog />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
@@ -276,7 +273,11 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
           <Button variant="outline" size="sm" onClick={() => setShowKey((v) => !v)}>
             {showKey ? "Hide" : "Show"} ingest details
           </Button>
-          <AddSensorDialog deviceId={device.id} />
+          <Link to="/sensors/new">
+            <Button size="sm" variant="outline">
+              <Plus className="mr-1 h-4 w-4" /> Add sensor
+            </Button>
+          </Link>
           <Button variant="ghost" size="icon" onClick={() => deleteDevice.mutate()} title="Delete device">
             <Trash2 className="h-4 w-4" />
           </Button>
