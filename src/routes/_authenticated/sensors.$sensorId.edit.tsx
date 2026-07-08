@@ -129,7 +129,7 @@ function EditSensorPage() {
       setErrors({});
 
       const primaryPin = pins[roles[0].key]!;
-      const nextState: Record<string, unknown> = { ...(sensor.state ?? {}), pins };
+      const nextState = { ...(sensor.state ?? {}), pins } as Record<string, string | boolean | Record<string, string>>;
       const { error } = await supabase
         .from("sensors")
         .update({
@@ -137,7 +137,7 @@ function EditSensorPage() {
           pin: primaryPin,
           view,
           unit: unit.trim() ? unit.trim() : null,
-          state: nextState,
+          state: nextState as never,
         })
         .eq("id", sensor.id);
       if (error) throw error;
