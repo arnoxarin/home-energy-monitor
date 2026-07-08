@@ -222,22 +222,44 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
         return;
       }
 
-      const nameById = new Map(sensors.map((s) => [s.id, s.name]));
+      const sensorById = new Map(sensors.map((s) => [s.id, s]));
       const fieldSet = new Set<string>();
       for (const r of rows) for (const k of Object.keys(r.payload ?? {})) fieldSet.add(k);
       const fields = Array.from(fieldSet).sort();
 
-      const header = ["timestamp", "sensor_id", "sensor_name", ...fields];
+      // Best-effort unit hints per payload field
+      const FIELD_UNITS: Record<string, string> = {
+        voltage: "V", current: "A", power: "W", energy: "kWh",
+        frequency: "Hz", pf: "",
+        temperature: "°C", humidity: "%",
+        distance: "cm", speed: "m/s",
+        value: "", state: "",
+      };
+      const fieldHeader = (f: string) => {
+        const u = FIELD_UNITS[f];
+        return u ? `${f} (${u})` : f;
+      };
+
+      const header = [
+        "timestamp", "sensor_id", "sensor_name", "sensor_kind", "sensor_unit",
+        ...fields.map(fieldHeader),
+      ];
       const escape = (v: unknown) => {
         const s = v == null ? "" : String(v);
         return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
       };
       const lines = [header.join(",")];
       for (const r of rows) {
+        const s = sensorById.get(r.sensor_id);
         lines.push(
-          [r.ts, r.sensor_id, nameById.get(r.sensor_id) ?? "", ...fields.map((f) => r.payload?.[f] ?? "")]
-            .map(escape)
-            .join(","),
+          [
+            r.ts,
+            r.sensor_id,
+            s?.name ?? "",
+            s?.kind ?? "",
+            s?.unit ?? (s ? (KIND_META[s.kind].unit ?? "") : ""),
+            ...fields.map((f) => r.payload?.[f] ?? ""),
+          ].map(escape).join(","),
         );
       }
       const csv = lines.join("\n");
@@ -246,7 +268,7 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const label = sensorId === "__all__" ? "all-sensors" : (nameById.get(sensorId) ?? "sensor").replace(/\s+/g, "_");
+      const label = sensorId === "__all__" ? "all-sensors" : (sensorById.get(sensorId)?.name ?? "sensor").replace(/\s+/g, "_");
       a.download = `readings_${label}_${start}_to_${end}.csv`;
       document.body.appendChild(a);
       a.click();
