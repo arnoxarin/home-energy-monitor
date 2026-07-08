@@ -843,7 +843,29 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
     v: Number(r.payload?.[activeField] ?? 0),
   }));
 
-  if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
+  if (!latest) {
+    const flat = Array.from({ length: 10 }, (_, i) => ({ t: String(i), v: 0 }));
+    return (
+      <div className="flex h-full flex-col">
+        <p className="truncate text-2xl font-bold leading-tight text-muted-foreground/60">
+          0.00
+          {sensor.unit ? <span className="ml-1 text-xs font-normal">{sensor.unit}</span> : null}
+        </p>
+        <div className="mt-1 flex-1 min-h-0 opacity-50">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={flat} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+              <XAxis dataKey="t" hide />
+              <YAxis domain={[0, 1]} tick={{ fontSize: 9 }} width={28} />
+              <Line type="monotone" dataKey="v" stroke="currentColor" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="mt-1 text-[10px] text-muted-foreground text-center">Waiting for data…</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex h-full flex-col">
