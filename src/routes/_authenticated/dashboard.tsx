@@ -445,12 +445,34 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
     refetchInterval: 5000,
   });
 
+  const restoreSensor = useMutation({
+    mutationFn: async (snapshot: Sensor) => {
+      const { error } = await supabase.from("sensors").insert({
+        id: snapshot.id,
+        device_id: snapshot.device_id,
+        name: snapshot.name,
+        kind: snapshot.kind,
+        pin: snapshot.pin,
+        view: snapshot.view,
+        unit: snapshot.unit,
+        state: snapshot.state as never,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sensors"] });
+      toast.success("Sensor restored");
+    },
+    onError: (e) => toast.error(`Couldn't restore: ${(e as Error).message}`),
+  });
+
   const deleteSensor = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("sensors").delete().eq("id", sensor.id);
       if (error) throw error;
     },
     onSuccess: () => {
+      const snapshot: Sensor = { ...sensor };
       qc.setQueryData<Sensor[]>(["sensors"], (prev) => (prev ?? []).filter((s) => s.id !== sensor.id));
       qc.invalidateQueries({ queryKey: ["sensors"] });
       const freed = [
@@ -461,6 +483,11 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
         description: freed.length
           ? `Freed pin${freed.length > 1 ? "s" : ""} ${freed.join(", ")} — dropdowns refreshed.`
           : "Dropdowns refreshed.",
+        duration: 8000,
+        action: {
+          label: "Undo",
+          onClick: () => restoreSensor.mutate(snapshot),
+        },
       });
     },
   });
