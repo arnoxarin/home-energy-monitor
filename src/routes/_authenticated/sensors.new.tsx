@@ -204,6 +204,29 @@ function NewSensorPage() {
     if (!deviceId && devicesQ.data && devicesQ.data.length > 0) setDeviceId(devicesQ.data[0].id);
   }, [devicesQ.data, deviceId]);
 
+  // Clear any locally chosen pin that is now marked as used (e.g. after
+  // switching devices, or another tab created a sensor).
+  useEffect(() => {
+    setPins((prev) => {
+      let changed = false;
+      const next: Partial<Record<PinRoleKey, string>> = { ...prev };
+      for (const [k, v] of Object.entries(prev)) {
+        if (v && usedPins.has(v)) { delete next[k as PinRoleKey]; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [usedPins]);
+
+  // Also add the current selections to the check so the same pin can't be
+  // picked in two roles at once.
+  const takenByOtherRole = (roleKey: PinRoleKey) =>
+    new Set(
+      Object.entries(pins)
+        .filter(([k, v]) => k !== roleKey && v)
+        .map(([, v]) => v as string),
+    );
+
+
   const save = useMutation({
     mutationFn: async () => {
       const errs: Record<string, string> = {};
