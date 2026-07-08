@@ -491,7 +491,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
+        <div className="glass-frame grid grid-cols-2 gap-3 max-w-2xl mx-auto">
           {sensors.map((s) => (
             <SensorCard key={s.id} sensor={s} />
           ))}
