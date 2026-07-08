@@ -161,6 +161,15 @@ function NewSensorPage() {
     },
   });
 
+  const sensorsQ = useQuery({
+    queryKey: ["sensors"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sensors").select("device_id,pin,state");
+      if (error) throw error;
+      return data as { device_id: string; pin: string | null; state: { pins?: Record<string, string> } | null }[];
+    },
+  });
+
   const [deviceId, setDeviceId] = useState<string>("");
   const [kind, setKind] = useState<SensorKind>("pzem04");
   const [name, setName] = useState("");
@@ -172,6 +181,19 @@ function NewSensorPage() {
   const meta = KIND_META[kind];
   const roles = PIN_ROLES[kind];
 
+  // Pins already assigned to other sensors on the selected device.
+  const usedPins = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of sensorsQ.data ?? []) {
+      if (s.device_id !== deviceId) continue;
+      if (s.pin) set.add(s.pin);
+      const rolePins = s.state?.pins;
+      if (rolePins) for (const v of Object.values(rolePins)) if (v) set.add(v);
+    }
+    return set;
+  }, [sensorsQ.data, deviceId]);
+
+
   useEffect(() => {
     setView(meta.defaultView);
     setUnit(meta.unit ?? "");
@@ -181,6 +203,29 @@ function NewSensorPage() {
   useEffect(() => {
     if (!deviceId && devicesQ.data && devicesQ.data.length > 0) setDeviceId(devicesQ.data[0].id);
   }, [devicesQ.data, deviceId]);
+
+  // Clear any locally chosen pin that is now marked as used (e.g. after
+  // switching devices, or another tab created a sensor).
+  useEffect(() => {
+    setPins((prev) => {
+      let changed = false;
+      const next: Partial<Record<PinRoleKey, string>> = { ...prev };
+      for (const [k, v] of Object.entries(prev)) {
+        if (v && usedPins.has(v)) { delete next[k as PinRoleKey]; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [usedPins]);
+
+  // Also add the current selections to the check so the same pin can't be
+  // picked in two roles at once.
+  const takenByOtherRole = (roleKey: PinRoleKey) =>
+    new Set(
+      Object.entries(pins)
+        .filter(([k, v]) => k !== roleKey && v)
+        .map(([, v]) => v as string),
+    );
+
 
   const save = useMutation({
     mutationFn: async () => {
@@ -310,29 +355,41 @@ function NewSensorPage() {
 
             <div className="space-y-3">
               <p className="text-sm font-medium">Pin assignment</p>
-              {roles.map((role) => (
-                <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold uppercase tracking-wide">{role.label}</Label>
-                    <span className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
-                      {role.key}
-                    </span>
+              {roles.map((role) => {
+                const otherRoleTaken = takenByOtherRole(role.key);
+                const available = role.options.filter((o) => !usedPins.has(o.pin) && !otherRoleTaken.has(o.pin));
+                return (
+                  <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold uppercase tracking-wide">{role.label}</Label>
+                      <span className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
+                        {role.key}
+                      </span>
+                    </div>
+                    <Select
+                      value={pins[role.key] ?? ""}
+                      onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={available.length === 0 ? "No free pins for this role" : "Select a compatible GPIO"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {available.length === 0 ? (
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                            All compatible pins are in use. Free one by deleting a sensor.
+                          </div>
+                        ) : (
+                          available.map((o) => (
+                            <SelectItem key={o.pin} value={o.pin}>{o.label}</SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{role.hint}</p>
+                    {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
                   </div>
-                  <Select
-                    value={pins[role.key] ?? ""}
-                    onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select a compatible GPIO" /></SelectTrigger>
-                    <SelectContent>
-                      {role.options.map((o) => (
-                        <SelectItem key={o.pin} value={o.pin}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">{role.hint}</p>
-                  {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
 
