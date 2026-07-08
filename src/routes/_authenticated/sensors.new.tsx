@@ -164,11 +164,18 @@ function NewSensorPage() {
   const sensorsQ = useQuery({
     queryKey: ["sensors"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("sensors").select("device_id,pin,state");
+      const { data, error } = await supabase.from("sensors").select("id,device_id,name,pin,state");
       if (error) throw error;
-      return data as { device_id: string; pin: string | null; state: { pins?: Record<string, string> } | null }[];
+      return data as {
+        id: string;
+        device_id: string;
+        name: string;
+        pin: string | null;
+        state: { pins?: Record<string, string> } | null;
+      }[];
     },
   });
+
 
   const [deviceId, setDeviceId] = useState<string>("");
   const [kind, setKind] = useState<SensorKind>("pzem04");
@@ -181,17 +188,20 @@ function NewSensorPage() {
   const meta = KIND_META[kind];
   const roles = PIN_ROLES[kind];
 
-  // Pins already assigned to other sensors on the selected device.
-  const usedPins = useMemo(() => {
-    const set = new Set<string>();
+  // pin -> sensor name (scoped to the currently selected device).
+  const pinOwners = useMemo(() => {
+    const map = new Map<string, string>();
     for (const s of sensorsQ.data ?? []) {
       if (s.device_id !== deviceId) continue;
-      if (s.pin) set.add(s.pin);
+      if (s.pin) map.set(s.pin, s.name);
       const rolePins = s.state?.pins;
-      if (rolePins) for (const v of Object.values(rolePins)) if (v) set.add(v);
+      if (rolePins) for (const v of Object.values(rolePins)) if (v) map.set(v, s.name);
     }
-    return set;
+    return map;
   }, [sensorsQ.data, deviceId]);
+
+  const usedPins = useMemo(() => new Set(pinOwners.keys()), [pinOwners]);
+
 
 
   useEffect(() => {
@@ -355,9 +365,28 @@ function NewSensorPage() {
 
             <div className="space-y-3">
               <p className="text-sm font-medium">Pin assignment</p>
+
+              {pinOwners.size > 0 && (
+                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs">
+                  <p className="font-medium text-foreground">Pins already in use on this device</p>
+                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                    {Array.from(pinOwners.entries())
+                      .sort((a, b) => Number(a[0]) - Number(b[0]))
+                      .map(([pin, owner]) => (
+                        <li key={pin}>
+                          GPIO {pin} — <span className="text-foreground">{owner}</span>
+                        </li>
+                      ))}
+                  </ul>
+                  <p className="mt-1">Delete a sensor to free its pins.</p>
+                </div>
+              )}
+
               {roles.map((role) => {
                 const otherRoleTaken = takenByOtherRole(role.key);
                 const available = role.options.filter((o) => !usedPins.has(o.pin) && !otherRoleTaken.has(o.pin));
+                const selectedPin = pins[role.key];
+                const selectedOwner = selectedPin ? pinOwners.get(selectedPin) : undefined;
                 return (
                   <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
                     <div className="flex items-center justify-between">
@@ -386,6 +415,11 @@ function NewSensorPage() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">{role.hint}</p>
+                    {selectedOwner && (
+                      <p className="text-xs text-amber-600">
+                        GPIO {selectedPin} is already used by "{selectedOwner}". Pick a different pin or delete that sensor.
+                      </p>
+                    )}
                     {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
                   </div>
                 );
