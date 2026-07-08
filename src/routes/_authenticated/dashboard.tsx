@@ -785,7 +785,21 @@ function pickPrimaryField(kind: SensorKind, payload: Record<string, number>): st
 
 function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }) {
   const latest = readings[readings.length - 1];
-  if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
+  if (!latest) {
+    return (
+      <div className="flex h-full flex-col justify-between">
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">value</p>
+          <p className="text-3xl font-bold leading-tight text-muted-foreground/60">
+            0.00
+            {sensor.unit ? <span className="ml-1 text-sm font-normal">{sensor.unit}</span> : null}
+          </p>
+        </div>
+        <p className="mt-2 text-[10px] text-muted-foreground">Waiting for data…</p>
+      </div>
+    );
+  }
+
   const entries = Object.entries(latest.payload);
   const primary = entries[0];
   const rest = entries.slice(1);
