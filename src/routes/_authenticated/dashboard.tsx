@@ -447,6 +447,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
     }
   }, [compact]);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const [editing, setEditing] = useState(false);
 
 
   const deleteDevice = useMutation({
