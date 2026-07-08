@@ -365,9 +365,28 @@ function NewSensorPage() {
 
             <div className="space-y-3">
               <p className="text-sm font-medium">Pin assignment</p>
+
+              {pinOwners.size > 0 && (
+                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs">
+                  <p className="font-medium text-foreground">Pins already in use on this device</p>
+                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                    {Array.from(pinOwners.entries())
+                      .sort((a, b) => Number(a[0]) - Number(b[0]))
+                      .map(([pin, owner]) => (
+                        <li key={pin}>
+                          GPIO {pin} — <span className="text-foreground">{owner}</span>
+                        </li>
+                      ))}
+                  </ul>
+                  <p className="mt-1">Delete a sensor to free its pins.</p>
+                </div>
+              )}
+
               {roles.map((role) => {
                 const otherRoleTaken = takenByOtherRole(role.key);
                 const available = role.options.filter((o) => !usedPins.has(o.pin) && !otherRoleTaken.has(o.pin));
+                const selectedPin = pins[role.key];
+                const selectedOwner = selectedPin ? pinOwners.get(selectedPin) : undefined;
                 return (
                   <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
                     <div className="flex items-center justify-between">
@@ -396,6 +415,11 @@ function NewSensorPage() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">{role.hint}</p>
+                    {selectedOwner && (
+                      <p className="text-xs text-amber-600">
+                        GPIO {selectedPin} is already used by "{selectedOwner}". Pick a different pin or delete that sensor.
+                      </p>
+                    )}
                     {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
                   </div>
                 );
