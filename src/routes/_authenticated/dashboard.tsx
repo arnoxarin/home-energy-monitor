@@ -503,7 +503,7 @@ function RelayControl({ sensor }: { sensor: Sensor }) {
     <div className="flex items-center justify-between rounded-lg border p-4">
       <div>
         <p className="text-sm font-medium">{on ? "ON" : "OFF"}</p>
-        <p className="text-xs text-muted-foreground">ESP32 polls /api/public/state</p>
+        
       </div>
       <Switch checked={on} onCheckedChange={(v) => toggle.mutate(v)} />
     </div>
