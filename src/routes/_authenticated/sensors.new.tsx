@@ -279,29 +279,33 @@ function NewSensorPage() {
               {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
 
-            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+            <div className="space-y-3">
               <p className="text-sm font-medium">Pin assignment</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {roles.map((role) => (
-                  <div key={role.key} className="space-y-1.5">
-                    <Label>{role.label}</Label>
-                    <Select
-                      value={pins[role.key] ?? ""}
-                      onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select GPIO" /></SelectTrigger>
-                      <SelectContent>
-                        {role.options.map((o) => (
-                          <SelectItem key={o.pin} value={o.pin}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">{role.hint}</p>
-                    {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
+              {roles.map((role) => (
+                <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold uppercase tracking-wide">{role.label}</Label>
+                    <span className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
+                      {role.key}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <Select
+                    value={pins[role.key] ?? ""}
+                    onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select a compatible GPIO" /></SelectTrigger>
+                    <SelectContent>
+                      {role.options.map((o) => (
+                        <SelectItem key={o.pin} value={o.pin}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{role.hint}</p>
+                  {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
+                </div>
+              ))}
             </div>
+
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
