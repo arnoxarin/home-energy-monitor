@@ -394,14 +394,24 @@ function NewSensorPage() {
               <div className="w-[220px]">
                 <TilePreview
                   name={name.trim() || meta.label}
-                  pin={pins[roles[0]?.key] ?? ""}
+                  pin={primaryPin}
                   kindLabel={meta.label}
                   Icon={meta.icon}
                   view={view}
                   unit={unit.trim()}
+                  readings={previewReadings}
+                  isMocked={isMocked}
                 />
               </div>
             </div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              {previewQ.isFetching
+                ? "Checking for existing readings on this pin…"
+                : isMocked
+                  ? "Showing simulated values — real readings will replace them after your device posts data."
+                  : "Live readings from a previous sensor on this pin."}
+            </p>
+
           </CardContent>
         </Card>
 
