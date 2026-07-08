@@ -355,29 +355,41 @@ function NewSensorPage() {
 
             <div className="space-y-3">
               <p className="text-sm font-medium">Pin assignment</p>
-              {roles.map((role) => (
-                <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold uppercase tracking-wide">{role.label}</Label>
-                    <span className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
-                      {role.key}
-                    </span>
+              {roles.map((role) => {
+                const otherRoleTaken = takenByOtherRole(role.key);
+                const available = role.options.filter((o) => !usedPins.has(o.pin) && !otherRoleTaken.has(o.pin));
+                return (
+                  <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold uppercase tracking-wide">{role.label}</Label>
+                      <span className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
+                        {role.key}
+                      </span>
+                    </div>
+                    <Select
+                      value={pins[role.key] ?? ""}
+                      onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={available.length === 0 ? "No free pins for this role" : "Select a compatible GPIO"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {available.length === 0 ? (
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                            All compatible pins are in use. Free one by deleting a sensor.
+                          </div>
+                        ) : (
+                          available.map((o) => (
+                            <SelectItem key={o.pin} value={o.pin}>{o.label}</SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{role.hint}</p>
+                    {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
                   </div>
-                  <Select
-                    value={pins[role.key] ?? ""}
-                    onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select a compatible GPIO" /></SelectTrigger>
-                    <SelectContent>
-                      {role.options.map((o) => (
-                        <SelectItem key={o.pin} value={o.pin}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">{role.hint}</p>
-                  {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
 
