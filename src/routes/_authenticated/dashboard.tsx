@@ -640,16 +640,26 @@ function SortableSensorGrid({
   storageKey,
   sensors,
   compact,
+  editing,
 }: {
   storageKey: string;
   sensors: Sensor[];
   compact: boolean;
+  editing: boolean;
 }) {
-  const [order, setOrder] = useState<string[]>(() => {
+  const cols = compact ? 12 : 8;
+  const defaultSize = (view: SensorView) => {
+    if (compact) {
+      return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 3, h: 3 } : { w: 4, h: 3 };
+    }
+    return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 2, h: 2 } : { w: 3, h: 3 };
+  };
+
+  const [layout, setLayout] = useState<Layout[]>(() => {
     if (typeof window === "undefined") return [];
     try {
       const raw = window.localStorage.getItem(storageKey);
-      return raw ? (JSON.parse(raw) as string[]) : [];
+      return raw ? (JSON.parse(raw) as Layout[]) : [];
     } catch {
       return [];
     }
@@ -657,78 +667,76 @@ function SortableSensorGrid({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(storageKey, JSON.stringify(order));
+      window.localStorage.setItem(storageKey, JSON.stringify(layout));
     }
-  }, [order, storageKey]);
+  }, [layout, storageKey]);
 
-  const orderedIds = useMemo(() => {
-    const known = new Set(sensors.map((s) => s.id));
-    const kept = order.filter((id) => known.has(id));
-    const missing = sensors
-      .filter((s) => !kept.includes(s.id))
-      .sort((a, b) => {
-        const rank = { graph: 0, numeric: 1, button: 2 } as const;
-        return rank[a.view] - rank[b.view];
-      })
-      .map((s) => s.id);
-    return [...kept, ...missing];
-  }, [order, sensors]);
+  // Merge saved layout with sensors: keep saved positions, append new sensors
+  const effectiveLayout: Layout[] = useMemo(() => {
+    const byId = new Map(layout.map((l) => [l.i, l]));
+    const rankBase: Record<SensorView, number> = { graph: 0, numeric: 1, button: 2 };
+    const sorted = [...sensors].sort((a, b) => rankBase[a.view] - rankBase[b.view]);
+    // find bottom row
+    let nextY = layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
+    let nextX = 0;
+    const out: Layout[] = [];
+    for (const s of sorted) {
+      const existing = byId.get(s.id);
+      if (existing) {
+        out.push(existing);
+      } else {
+        const sz = defaultSize(s.view);
+        if (nextX + sz.w > cols) {
+          nextX = 0;
+          nextY += sz.h;
+        }
+        out.push({ i: s.id, x: nextX, y: nextY, w: sz.w, h: sz.h });
+        nextX += sz.w;
+      }
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, sensors, cols, compact]);
+
+  const [containerRef, width] = useContainerWidth();
 
   const sensorMap = useMemo(() => new Map(sensors.map((s) => [s.id, s])), [sensors]);
 
-  const sensors_ordered = orderedIds
-    .map((id) => sensorMap.get(id))
-    .filter((s): s is Sensor => Boolean(s));
-
-  const sensorsPointer = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
-  const sensorsKeyboard = useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates });
-  const dndSensors = useSensors(sensorsPointer, sensorsKeyboard);
-
   return (
-    <DndContext
-      sensors={dndSensors}
-      collisionDetection={closestCenter}
-      onDragEnd={({ active, over }) => {
-        if (!over || active.id === over.id) return;
-        const oldIndex = orderedIds.indexOf(String(active.id));
-        const newIndex = orderedIds.indexOf(String(over.id));
-        if (oldIndex < 0 || newIndex < 0) return;
-        setOrder(arrayMove(orderedIds, oldIndex, newIndex));
-      }}
+    <div
+      ref={containerRef}
+      className={`glass-frame mx-auto ${compact ? "max-w-3xl" : "max-w-4xl"} ${editing ? "ring-2 ring-primary/40" : ""}`}
     >
-      <SortableContext items={orderedIds} strategy={rectSortingStrategy}>
-        <div
-          className={`glass-frame grid mx-auto ${
-            compact
-              ? "grid-cols-4 sm:grid-cols-6 gap-1.5 max-w-2xl"
-              : "grid-cols-2 sm:grid-cols-3 gap-3 max-w-3xl"
-          }`}
+      {width > 0 && (
+        <GridLayout
+          className="layout"
+          layout={effectiveLayout}
+          cols={cols}
+          rowHeight={width / cols - 8}
+          width={width - 24}
+          margin={[8, 8]}
+          isDraggable={editing}
+          isResizable={editing}
+          compactType="vertical"
+          onLayoutChange={(next) => {
+            if (editing) setLayout(next);
+          }}
         >
-          {sensors_ordered.map((s) => (
-            <SortableSensorCard key={s.id} sensor={s} />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
-  );
-}
-
-function SortableSensorCard({ sensor }: { sensor: Sensor }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: sensor.id,
-  });
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 20 : "auto",
-  };
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <SensorCard sensor={sensor} />
+          {effectiveLayout.map((l) => {
+            const s = sensorMap.get(l.i);
+            if (!s) return <div key={l.i} />;
+            return (
+              <div key={l.i} className={editing ? "cursor-move" : ""}>
+                <SensorCard sensor={s} />
+              </div>
+            );
+          })}
+        </GridLayout>
+      )}
     </div>
   );
 }
+
 
 function SensorCard({ sensor }: { sensor: Sensor }) {
 
