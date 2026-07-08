@@ -343,6 +343,28 @@ function NewSensorPage() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>3. Preview</CardTitle>
+            <CardDescription>How this sensor will appear on your dashboard.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <div className="w-[220px]">
+                <TilePreview
+                  name={name.trim() || meta.label}
+                  pin={pins[roles[0]?.key] ?? ""}
+                  kindLabel={meta.label}
+                  Icon={meta.icon}
+                  view={view}
+                  unit={unit.trim()}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => navigate({ to: "/dashboard" })}>Cancel</Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending || (devicesQ.data ?? []).length === 0}>
