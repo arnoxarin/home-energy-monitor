@@ -491,7 +491,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
+        <div className="glass-frame grid grid-cols-2 gap-3 max-w-2xl mx-auto">
           {sensors.map((s) => (
             <SensorCard key={s.id} sensor={s} />
           ))}
@@ -750,11 +750,13 @@ function RelayControl({ sensor }: { sensor: Sensor }) {
       <p className={`text-xs uppercase tracking-[0.2em] ${on ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
         {on ? "On" : "Off"}
       </p>
-      <Switch
-        checked={on}
-        onCheckedChange={(v) => toggle.mutate(v)}
-        className="scale-150 data-[state=checked]:bg-primary-foreground/90"
-      />
+      <div className="glass-chip px-4 py-2">
+        <Switch
+          checked={on}
+          onCheckedChange={(v) => toggle.mutate(v)}
+          className="scale-150 data-[state=checked]:bg-primary-foreground/90"
+        />
+      </div>
     </div>
   );
 }
@@ -786,7 +788,7 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
       {rest.length > 0 && (
         <div className="mt-2 grid grid-cols-2 gap-1.5">
           {rest.slice(0, 4).map(([k, v]) => (
-            <div key={k} className="rounded-md bg-background/40 backdrop-blur-md border border-white/20 px-2 py-1">
+            <div key={k} className="glass-chip px-2 py-1">
               <p className="truncate text-[9px] uppercase text-muted-foreground">{k}</p>
               <p className="truncate text-xs font-semibold">
                 {typeof v === "number" ? v.toFixed(2) : String(v)}
