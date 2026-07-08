@@ -164,11 +164,18 @@ function NewSensorPage() {
   const sensorsQ = useQuery({
     queryKey: ["sensors"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("sensors").select("device_id,pin,state");
+      const { data, error } = await supabase.from("sensors").select("id,device_id,name,pin,state");
       if (error) throw error;
-      return data as { device_id: string; pin: string | null; state: { pins?: Record<string, string> } | null }[];
+      return data as {
+        id: string;
+        device_id: string;
+        name: string;
+        pin: string | null;
+        state: { pins?: Record<string, string> } | null;
+      }[];
     },
   });
+
 
   const [deviceId, setDeviceId] = useState<string>("");
   const [kind, setKind] = useState<SensorKind>("pzem04");
