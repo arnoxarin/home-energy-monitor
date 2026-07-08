@@ -694,7 +694,7 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
               {sensor.name}
               {sensor.pin ? (
                 <span className={`ml-1 font-normal ${on ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                  ({sensor.pin})
+                  [{sensor.pin}]
                 </span>
               ) : null}
             </p>
