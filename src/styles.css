@@ -211,3 +211,29 @@
   color: var(--color-primary-foreground);
 }
 
+/* Small inner glass surface reused inside tiles (sub-values, switch bay) */
+@utility glass-chip {
+  position: relative;
+  border-radius: 0.625rem;
+  background: color-mix(in oklab, var(--color-card) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-foreground) 8%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 45%, transparent) inset,
+    0 6px 14px -10px color-mix(in oklab, var(--color-foreground) 25%, transparent);
+}
+
+/* Subtle glass frame for the tile grid */
+@utility glass-frame {
+  border-radius: 1.5rem;
+  padding: 0.75rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-card) 40%, transparent),
+    color-mix(in oklab, var(--color-primary) 6%, transparent)
+  );
+  border: 1px solid color-mix(in oklab, var(--color-foreground) 6%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+}
+
+
