@@ -117,13 +117,24 @@ function Dashboard() {
     },
   });
 
-  // Realtime — refetch readings when new ones land
+  // Realtime — append new readings straight into the cache for instant graph updates
   useEffect(() => {
     const ch = supabase
       .channel("readings")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "sensor_readings" }, () => {
-        qc.invalidateQueries({ queryKey: ["readings"] });
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "sensor_readings" },
+        (payload) => {
+          const row = payload.new as Reading;
+          if (!row?.sensor_id) return;
+          qc.setQueryData<Reading[]>(["readings", row.sensor_id], (prev) => {
+            const list = prev ?? [];
+            if (list.some((r) => r.id === row.id)) return list;
+            const next = [...list, row];
+            return next.length > 100 ? next.slice(next.length - 100) : next;
+          });
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
