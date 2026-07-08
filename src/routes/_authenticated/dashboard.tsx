@@ -45,6 +45,7 @@ import {
   LogOut,
   Plus,
   Trash2,
+  Pencil,
   Zap,
   Thermometer,
   Power,
@@ -468,9 +469,16 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
             </p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSensor.mutate()}>
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex gap-1">
+          <Link to="/sensors/$sensorId/edit" params={{ sensorId: sensor.id }}>
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit sensor">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSensor.mutate()} title="Delete sensor">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {sensor.view === "button" ? (
