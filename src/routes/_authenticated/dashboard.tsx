@@ -491,12 +491,31 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <div className="glass-frame grid grid-cols-2 gap-3 max-w-2xl mx-auto">
-          {sensors.map((s) => (
-            <SensorCard key={s.id} sensor={s} />
-          ))}
-        </div>
+        (() => {
+          const groups: { key: string; label: string; items: typeof sensors }[] = [
+            { key: "graph", label: "Graphs", items: sensors.filter((s) => s.view === "graph") },
+            { key: "numeric", label: "Numeric", items: sensors.filter((s) => s.view === "numeric") },
+            { key: "button", label: "Switches", items: sensors.filter((s) => s.view === "button") },
+          ].filter((g) => g.items.length > 0);
+          return (
+            <div className="space-y-6 max-w-3xl mx-auto">
+              {groups.map((g) => (
+                <div key={g.key} className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground px-1">
+                    {g.label}
+                  </p>
+                  <div className="glass-frame grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {g.items.map((s) => (
+                      <SensorCard key={s.id} sensor={s} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()
       )}
+
     </section>
   );
 }
