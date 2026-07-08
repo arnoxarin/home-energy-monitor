@@ -491,7 +491,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
           {sensors.map((s) => (
             <SensorCard key={s.id} sensor={s} />
           ))}
@@ -682,7 +682,7 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
   const on = isButton && Boolean((sensor.state as { on?: boolean }).on);
 
   return (
-    <div className={`glass-tile group aspect-square flex flex-col p-4 ${on ? "glass-tile-on" : ""}`}>
+    <div className={`glass-tile group aspect-square flex flex-col p-3 text-sm ${on ? "glass-tile-on" : ""}`}>
       {/* Header */}
       <div className="relative z-10 flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
