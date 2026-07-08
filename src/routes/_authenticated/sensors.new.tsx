@@ -161,6 +161,15 @@ function NewSensorPage() {
     },
   });
 
+  const sensorsQ = useQuery({
+    queryKey: ["sensors"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sensors").select("device_id,pin,state");
+      if (error) throw error;
+      return data as { device_id: string; pin: string | null; state: { pins?: Record<string, string> } | null }[];
+    },
+  });
+
   const [deviceId, setDeviceId] = useState<string>("");
   const [kind, setKind] = useState<SensorKind>("pzem04");
   const [name, setName] = useState("");
@@ -171,6 +180,19 @@ function NewSensorPage() {
 
   const meta = KIND_META[kind];
   const roles = PIN_ROLES[kind];
+
+  // Pins already assigned to other sensors on the selected device.
+  const usedPins = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of sensorsQ.data ?? []) {
+      if (s.device_id !== deviceId) continue;
+      if (s.pin) set.add(s.pin);
+      const rolePins = s.state?.pins;
+      if (rolePins) for (const v of Object.values(rolePins)) if (v) set.add(v);
+    }
+    return set;
+  }, [sensorsQ.data, deviceId]);
+
 
   useEffect(() => {
     setView(meta.defaultView);
