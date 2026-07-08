@@ -163,6 +163,7 @@ function Dashboard() {
             <Link to="/devices">
               <Button variant="outline" size="sm">Devices</Button>
             </Link>
+            <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
             <AddDeviceDialog />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
