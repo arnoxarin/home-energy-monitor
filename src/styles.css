@@ -161,8 +161,7 @@
     0 20px 40px -20px color-mix(in oklab, var(--color-foreground) 25%, transparent),
     0 8px 20px -12px color-mix(in oklab, var(--color-primary) 20%, transparent);
   transition: transform 200ms ease, box-shadow 200ms ease;
-}
-@utility glass-tile {
+
   &::before {
     content: "";
     position: absolute;
@@ -186,13 +185,9 @@
       transparent 40%,
       color-mix(in oklab, var(--color-primary) 45%, transparent)
     );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
     mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
     opacity: 0.75;
