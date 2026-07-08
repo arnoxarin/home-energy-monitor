@@ -56,7 +56,7 @@ export const Route = createFileRoute("/api/public/ingest")({
         const byPin = new Map((sensors ?? []).map((s) => [s.pin, s.id]));
         const validIds = new Set((sensors ?? []).map((s) => s.id));
 
-        const rows: Array<{ sensor_id: string; user_id: string; payload: unknown }> = [];
+        const rows: Array<{ sensor_id: string; user_id: string; payload: Json }> = [];
         for (const r of parsed.readings) {
           let sid = r.sensor_id;
           if (!sid && r.pin) sid = byPin.get(r.pin);
