@@ -770,19 +770,32 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
   const latest = readings[readings.length - 1];
   if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
   const entries = Object.entries(latest.payload);
+  const primary = entries[0];
+  const rest = entries.slice(1);
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-3">
-        {entries.map(([k, v]) => (
-          <div key={k} className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">{k}</p>
-            <p className="text-lg font-semibold">
-              {typeof v === "number" ? v.toFixed(2) : String(v)}
-            </p>
-          </div>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">Updated {new Date(latest.ts).toLocaleTimeString()}</p>
+    <div className="flex h-full flex-col justify-between">
+      {primary && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{primary[0]}</p>
+          <p className="text-3xl font-bold leading-tight">
+            {typeof primary[1] === "number" ? (primary[1] as number).toFixed(2) : String(primary[1])}
+            {sensor.unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{sensor.unit}</span> : null}
+          </p>
+        </div>
+      )}
+      {rest.length > 0 && (
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          {rest.slice(0, 4).map(([k, v]) => (
+            <div key={k} className="rounded-md bg-background/40 backdrop-blur-md border border-white/20 px-2 py-1">
+              <p className="truncate text-[9px] uppercase text-muted-foreground">{k}</p>
+              <p className="truncate text-xs font-semibold">
+                {typeof v === "number" ? v.toFixed(2) : String(v)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="mt-2 text-[10px] text-muted-foreground">Updated {new Date(latest.ts).toLocaleTimeString()}</p>
     </div>
   );
 }
