@@ -750,11 +750,13 @@ function RelayControl({ sensor }: { sensor: Sensor }) {
       <p className={`text-xs uppercase tracking-[0.2em] ${on ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
         {on ? "On" : "Off"}
       </p>
-      <Switch
-        checked={on}
-        onCheckedChange={(v) => toggle.mutate(v)}
-        className="scale-150 data-[state=checked]:bg-primary-foreground/90"
-      />
+      <div className="glass-chip px-4 py-2">
+        <Switch
+          checked={on}
+          onCheckedChange={(v) => toggle.mutate(v)}
+          className="scale-150 data-[state=checked]:bg-primary-foreground/90"
+        />
+      </div>
     </div>
   );
 }
