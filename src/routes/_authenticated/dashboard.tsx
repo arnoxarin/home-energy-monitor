@@ -453,7 +453,15 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
     onSuccess: () => {
       qc.setQueryData<Sensor[]>(["sensors"], (prev) => (prev ?? []).filter((s) => s.id !== sensor.id));
       qc.invalidateQueries({ queryKey: ["sensors"] });
-      toast.success("Sensor removed");
+      const freed = [
+        sensor.pin,
+        ...Object.values((sensor.state as { pins?: Record<string, string> })?.pins ?? {}),
+      ].filter((p): p is string => Boolean(p));
+      toast.success("Sensor removed", {
+        description: freed.length
+          ? `Freed pin${freed.length > 1 ? "s" : ""} ${freed.join(", ")} — dropdowns refreshed.`
+          : "Dropdowns refreshed.",
+      });
     },
   });
 
