@@ -198,6 +198,7 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
   const [sensorId, setSensorId] = useState<string>("__all__");
   const [start, setStart] = useState(weekAgo);
   const [end, setEnd] = useState(today);
+  const [format, setFormat] = useState<"csv" | "xlsx">("csv");
   const [busy, setBusy] = useState(false);
 
   const runExport = async () => {
@@ -244,32 +245,53 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
         "timestamp", "sensor_id", "sensor_name", "sensor_kind", "sensor_unit",
         ...fields.map(fieldHeader),
       ];
-      const escape = (v: unknown) => {
-        const s = v == null ? "" : String(v);
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-      };
-      const lines = [header.join(",")];
-      for (const r of rows) {
+      const dataRows = rows.map((r) => {
         const s = sensorById.get(r.sensor_id);
-        lines.push(
-          [
-            r.ts,
-            r.sensor_id,
-            s?.name ?? "",
-            s?.kind ?? "",
-            s?.unit ?? (s ? (KIND_META[s.kind].unit ?? "") : ""),
-            ...fields.map((f) => r.payload?.[f] ?? ""),
-          ].map(escape).join(","),
-        );
-      }
-      const csv = lines.join("\n");
+        return [
+          r.ts,
+          r.sensor_id,
+          s?.name ?? "",
+          s?.kind ?? "",
+          s?.unit ?? (s ? (KIND_META[s.kind].unit ?? "") : ""),
+          ...fields.map((f) => (r.payload?.[f] ?? "") as string | number),
+        ];
+      });
 
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const label = sensorId === "__all__" ? "all-sensors" : (sensorById.get(sensorId)?.name ?? "sensor").replace(/\s+/g, "_");
+      const baseName = `readings_${label}_${start}_to_${end}`;
+
+      let blob: Blob;
+      let filename: string;
+      if (format === "xlsx") {
+        const XLSX = await import("xlsx");
+        const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
+        // Auto-size columns based on max content length
+        ws["!cols"] = header.map((h, i) => {
+          const maxLen = Math.max(
+            String(h).length,
+            ...dataRows.map((row) => String(row[i] ?? "").length),
+          );
+          return { wch: Math.min(Math.max(maxLen + 2, 10), 40) };
+        });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Readings");
+        const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
+        blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        filename = `${baseName}.xlsx`;
+      } else {
+        const escape = (v: unknown) => {
+          const s = v == null ? "" : String(v);
+          return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        };
+        const csv = [header, ...dataRows].map((row) => row.map(escape).join(",")).join("\n");
+        blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        filename = `${baseName}.csv`;
+      }
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const label = sensorId === "__all__" ? "all-sensors" : (sensorById.get(sensorId)?.name ?? "sensor").replace(/\s+/g, "_");
-      a.download = `readings_${label}_${start}_to_${end}.csv`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -287,13 +309,13 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
-          <Download className="mr-1 h-4 w-4" /> Export CSV
+          <Download className="mr-1 h-4 w-4" /> Export
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Export sensor readings</DialogTitle>
-          <DialogDescription>Choose a sensor and date range. Data is downloaded as a CSV file.</DialogDescription>
+          <DialogDescription>Choose a sensor, date range, and file format.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -318,10 +340,20 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
               <Input type="date" value={end} min={start} max={today} onChange={(e) => setEnd(e.target.value)} />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>Format</Label>
+            <Select value={format} onValueChange={(v) => setFormat(v as "csv" | "xlsx")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="csv">CSV (.csv)</SelectItem>
+                <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <DialogFooter>
           <Button onClick={runExport} disabled={busy || !start || !end}>
-            {busy ? "Preparing…" : "Download CSV"}
+            {busy ? "Preparing…" : `Download ${format.toUpperCase()}`}
           </Button>
         </DialogFooter>
       </DialogContent>
