@@ -451,6 +451,7 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
       if (error) throw error;
     },
     onSuccess: () => {
+      qc.setQueryData<Sensor[]>(["sensors"], (prev) => (prev ?? []).filter((s) => s.id !== sensor.id));
       qc.invalidateQueries({ queryKey: ["sensors"] });
       toast.success("Sensor removed");
     },
