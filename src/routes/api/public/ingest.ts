@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
+type Json = string | number | boolean | null | { [k: string]: Json } | Json[];
+
 const ReadingSchema = z.object({
   pin: z.string().optional(),
   sensor_id: z.string().uuid().optional(),
