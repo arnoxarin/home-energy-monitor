@@ -472,6 +472,15 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
               <Plus className="mr-1 h-4 w-4" /> Add sensor
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCompact((v) => !v)}
+            title={compact ? "Switch to comfortable layout" : "Switch to compact layout"}
+          >
+            {compact ? <LayoutGrid className="mr-1 h-4 w-4" /> : <Rows3 className="mr-1 h-4 w-4" />}
+            {compact ? "Comfortable" : "Compact"}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => deleteDevice.mutate()} title="Delete device">
             <Trash2 className="h-4 w-4" />
           </Button>
