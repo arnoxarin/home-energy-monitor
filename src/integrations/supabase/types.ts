@@ -14,7 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      devices: {
+        Row: {
+          created_at: string
+          id: string
+          ingest_key: string
+          last_seen_at: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingest_key?: string
+          last_seen_at?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingest_key?: string
+          last_seen_at?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sensor_readings: {
+        Row: {
+          id: number
+          payload: Json
+          sensor_id: string
+          ts: string
+          user_id: string
+        }
+        Insert: {
+          id?: number
+          payload: Json
+          sensor_id: string
+          ts?: string
+          user_id: string
+        }
+        Update: {
+          id?: number
+          payload?: Json
+          sensor_id?: string
+          ts?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sensor_readings_sensor_id_fkey"
+            columns: ["sensor_id"]
+            isOneToOne: false
+            referencedRelation: "sensors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sensors: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          kind: Database["public"]["Enums"]["sensor_kind"]
+          name: string
+          pin: string | null
+          state: Json
+          unit: string | null
+          user_id: string
+          view: Database["public"]["Enums"]["sensor_view"]
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          kind: Database["public"]["Enums"]["sensor_kind"]
+          name: string
+          pin?: string | null
+          state?: Json
+          unit?: string | null
+          user_id: string
+          view?: Database["public"]["Enums"]["sensor_view"]
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["sensor_kind"]
+          name?: string
+          pin?: string | null
+          state?: Json
+          unit?: string | null
+          user_id?: string
+          view?: Database["public"]["Enums"]["sensor_view"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sensors_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +128,15 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      sensor_kind:
+        | "pzem04"
+        | "dht22"
+        | "relay"
+        | "analog"
+        | "digital"
+        | "ultrasonic"
+        | "radar"
+      sensor_view: "graph" | "numeric" | "button"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +263,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      sensor_kind: [
+        "pzem04",
+        "dht22",
+        "relay",
+        "analog",
+        "digital",
+        "ultrasonic",
+        "radar",
+      ],
+      sensor_view: ["graph", "numeric", "button"],
+    },
   },
 } as const
