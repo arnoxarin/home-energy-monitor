@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Activity, ArrowLeft } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   KIND_META,
@@ -342,6 +343,28 @@ function NewSensorPage() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>3. Preview</CardTitle>
+            <CardDescription>How this sensor will appear on your dashboard.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-center">
+              <div className="w-[220px]">
+                <TilePreview
+                  name={name.trim() || meta.label}
+                  pin={pins[roles[0]?.key] ?? ""}
+                  kindLabel={meta.label}
+                  Icon={meta.icon}
+                  view={view}
+                  unit={unit.trim()}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => navigate({ to: "/dashboard" })}>Cancel</Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending || (devicesQ.data ?? []).length === 0}>
@@ -352,3 +375,73 @@ function NewSensorPage() {
     </div>
   );
 }
+
+function TilePreview({
+  name,
+  pin,
+  kindLabel,
+  Icon,
+  view,
+  unit,
+}: {
+  name: string;
+  pin: string;
+  kindLabel: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  view: SensorView;
+  unit: string;
+}) {
+  const isButton = view === "button";
+  return (
+    <div className={`glass-tile group aspect-square flex flex-col p-3 text-sm`}>
+      <div className="relative z-10 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background/40 backdrop-blur-md border border-white/30">
+            <Icon className="h-4 w-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight">
+              {name}
+              {pin ? <span className="ml-1 font-normal text-muted-foreground">[{pin}]</span> : null}
+            </p>
+            {!isButton && (
+              <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+                {kindLabel}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="relative z-10 mt-3 flex-1 min-h-0">
+        {isButton ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Off</p>
+            <Switch checked={false} className="scale-150 pointer-events-none" />
+          </div>
+        ) : view === "numeric" ? (
+          <div className="flex h-full flex-col justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">value</p>
+              <p className="text-3xl font-bold leading-tight">
+                0.00
+                {unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{unit}</span> : null}
+              </p>
+            </div>
+            <p className="mt-2 text-[10px] text-muted-foreground">Waiting for data…</p>
+          </div>
+        ) : (
+          <div className="flex h-full items-end gap-1">
+            {[30, 50, 40, 70, 55, 80, 65, 90, 75, 60].map((h, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-sm bg-primary/40"
+                style={{ height: `${h}%` }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
