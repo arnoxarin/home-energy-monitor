@@ -815,24 +815,24 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
   if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <p className="text-2xl font-bold">
+    <div className="flex h-full flex-col">
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-2xl font-bold leading-tight">
             {typeof latest.payload[activeField] === "number"
               ? (latest.payload[activeField] as number).toFixed(2)
               : "—"}
-            {sensor.unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{sensor.unit}</span> : null}
+            {sensor.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span> : null}
           </p>
-          <p className="text-xs text-muted-foreground">{activeField}</p>
+          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{activeField}</p>
         </div>
         {availableFields.length > 1 && (
-          <div className="flex flex-wrap gap-1">
-            {availableFields.map((f) => (
+          <div className="flex flex-wrap justify-end gap-1 max-w-[55%]">
+            {availableFields.slice(0, 4).map((f) => (
               <Badge
                 key={f}
                 variant={f === activeField ? "default" : "outline"}
-                className="cursor-pointer"
+                className="cursor-pointer px-1.5 py-0 text-[9px] backdrop-blur-md"
                 onClick={() => setSelected(f)}
               >
                 {f}
@@ -841,13 +841,13 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
           </div>
         )}
       </div>
-      <div className="h-40">
+      <div className="mt-1 flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0 0)" />
-            <XAxis dataKey="t" tick={{ fontSize: 10 }} hide />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip contentStyle={{ fontSize: 12 }} />
+          <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+            <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
+            <YAxis tick={{ fontSize: 9 }} width={28} />
+            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
             <Line type="monotone" dataKey="v" stroke="var(--color-primary)" dot={false} strokeWidth={2} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
