@@ -53,6 +53,8 @@ import {
   Waves,
   Cpu,
   Download,
+  LayoutGrid,
+  Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -430,7 +432,17 @@ function AddDeviceDialog() {
 function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] }) {
   const qc = useQueryClient();
   const [showKey, setShowKey] = useState(false);
+  const [compact, setCompact] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("dashboard-compact") === "1";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("dashboard-compact", compact ? "1" : "0");
+    }
+  }, [compact]);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+
 
   const deleteDevice = useMutation({
     mutationFn: async () => {
@@ -462,6 +474,15 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
               <Plus className="mr-1 h-4 w-4" /> Add sensor
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCompact((v) => !v)}
+            title={compact ? "Switch to comfortable layout" : "Switch to compact layout"}
+          >
+            {compact ? <LayoutGrid className="mr-1 h-4 w-4" /> : <Rows3 className="mr-1 h-4 w-4" />}
+            {compact ? "Comfortable" : "Compact"}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => deleteDevice.mutate()} title="Delete device">
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -491,7 +512,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <div className="glass-frame grid grid-cols-3 sm:grid-cols-4 gap-2 max-w-3xl mx-auto">
+        <div className={`glass-frame grid mx-auto ${compact ? "grid-cols-4 sm:grid-cols-6 gap-1.5 max-w-2xl" : "grid-cols-2 sm:grid-cols-3 gap-3 max-w-3xl"}`}>
           {[...sensors]
             .sort((a, b) => {
               const order = { graph: 0, numeric: 1, button: 2 } as const;
