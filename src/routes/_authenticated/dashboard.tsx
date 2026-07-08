@@ -453,7 +453,7 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
       if (error) throw error;
       return (data as Reading[]).reverse();
     },
-    refetchInterval: 5000,
+    staleTime: 60_000,
   });
 
   const restoreSensor = useMutation({
