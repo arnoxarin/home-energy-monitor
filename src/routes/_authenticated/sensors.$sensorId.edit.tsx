@@ -97,6 +97,16 @@ function EditSensorPage() {
     setLoaded(true);
   }, [sensor, loaded]);
 
+  // If the sensor being edited gets deleted (from another tab, dashboard, etc.)
+  // bounce back to the dashboard instead of stranding the user on a dead form.
+  useEffect(() => {
+    if (!sensorsQ.isSuccess) return;
+    if (loaded && !sensor) {
+      toast.error("This sensor was deleted");
+      navigate({ to: "/dashboard" });
+    }
+  }, [sensorsQ.isSuccess, sensorsQ.data, loaded, sensor, navigate]);
+
   const meta = sensor ? KIND_META[sensor.kind] : null;
   const roles = sensor ? PIN_ROLES[sensor.kind] : [];
 
