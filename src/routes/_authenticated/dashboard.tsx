@@ -57,9 +57,11 @@ import {
   Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
-import GridLayout, { useContainerWidth, type Layout, type LayoutItem } from "react-grid-layout";
+import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+const ResponsiveGrid = WidthProvider(GridLayout);
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
