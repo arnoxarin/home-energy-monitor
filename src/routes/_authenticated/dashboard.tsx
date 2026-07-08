@@ -53,6 +53,8 @@ import {
   Waves,
   Cpu,
   Download,
+  LayoutGrid,
+  Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
 
