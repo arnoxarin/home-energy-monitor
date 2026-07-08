@@ -273,7 +273,11 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
           <Button variant="outline" size="sm" onClick={() => setShowKey((v) => !v)}>
             {showKey ? "Hide" : "Show"} ingest details
           </Button>
-          <AddSensorDialog deviceId={device.id} />
+          <Link to="/sensors/new" search={{ device: device.id }}>
+            <Button size="sm" variant="outline">
+              <Plus className="mr-1 h-4 w-4" /> Add sensor
+            </Button>
+          </Link>
           <Button variant="ghost" size="icon" onClick={() => deleteDevice.mutate()} title="Delete device">
             <Trash2 className="h-4 w-4" />
           </Button>
