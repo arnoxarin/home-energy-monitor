@@ -492,29 +492,25 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
         (() => {
-          const groups: { key: string; label: string; items: typeof sensors }[] = [
-            { key: "graph", label: "Graphs", items: sensors.filter((s) => s.view === "graph") },
-            { key: "numeric", label: "Numeric", items: sensors.filter((s) => s.view === "numeric") },
-            { key: "button", label: "Switches", items: sensors.filter((s) => s.view === "button") },
-          ].filter((g) => g.items.length > 0);
+          const groups = [
+            sensors.filter((s) => s.view === "graph"),
+            sensors.filter((s) => s.view === "numeric"),
+            sensors.filter((s) => s.view === "button"),
+          ].filter((g) => g.length > 0);
           return (
-            <div className="space-y-6 max-w-3xl mx-auto">
-              {groups.map((g) => (
-                <div key={g.key} className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground px-1">
-                    {g.label}
-                  </p>
-                  <div className="glass-frame grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {g.items.map((s) => (
-                      <SensorCard key={s.id} sensor={s} />
-                    ))}
-                  </div>
+            <div className="space-y-4 max-w-3xl mx-auto">
+              {groups.map((items, i) => (
+                <div key={i} className="glass-frame grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {items.map((s) => (
+                    <SensorCard key={s.id} sensor={s} />
+                  ))}
                 </div>
               ))}
             </div>
           );
         })()
       )}
+
 
     </section>
   );
@@ -789,7 +785,21 @@ function pickPrimaryField(kind: SensorKind, payload: Record<string, number>): st
 
 function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }) {
   const latest = readings[readings.length - 1];
-  if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
+  if (!latest) {
+    return (
+      <div className="flex h-full flex-col justify-between">
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">value</p>
+          <p className="text-3xl font-bold leading-tight text-muted-foreground/60">
+            0.00
+            {sensor.unit ? <span className="ml-1 text-sm font-normal">{sensor.unit}</span> : null}
+          </p>
+        </div>
+        <p className="mt-2 text-[10px] text-muted-foreground">Waiting for data…</p>
+      </div>
+    );
+  }
+
   const entries = Object.entries(latest.payload);
   const primary = entries[0];
   const rest = entries.slice(1);
@@ -833,7 +843,29 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
     v: Number(r.payload?.[activeField] ?? 0),
   }));
 
-  if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
+  if (!latest) {
+    const flat = Array.from({ length: 10 }, (_, i) => ({ t: String(i), v: 0 }));
+    return (
+      <div className="flex h-full flex-col">
+        <p className="truncate text-2xl font-bold leading-tight text-muted-foreground/60">
+          0.00
+          {sensor.unit ? <span className="ml-1 text-xs font-normal">{sensor.unit}</span> : null}
+        </p>
+        <div className="mt-1 flex-1 min-h-0 opacity-50">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={flat} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+              <XAxis dataKey="t" hide />
+              <YAxis domain={[0, 1]} tick={{ fontSize: 9 }} width={28} />
+              <Line type="monotone" dataKey="v" stroke="currentColor" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <p className="mt-1 text-[10px] text-muted-foreground text-center">Waiting for data…</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex h-full flex-col">
