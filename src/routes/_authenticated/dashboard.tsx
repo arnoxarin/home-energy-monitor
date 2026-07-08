@@ -489,6 +489,15 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
             {compact ? <LayoutGrid className="mr-1 h-4 w-4" /> : <Rows3 className="mr-1 h-4 w-4" />}
             {compact ? "Comfortable" : "Compact"}
           </Button>
+          <Button
+            variant={editing ? "default" : "outline"}
+            size="sm"
+            onClick={() => setEditing((v) => !v)}
+            title="Toggle layout edit mode"
+          >
+            <Pencil className="mr-1 h-4 w-4" />
+            {editing ? "Done" : "Edit layout"}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => deleteDevice.mutate()} title="Delete device">
             <Trash2 className="h-4 w-4" />
           </Button>
