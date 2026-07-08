@@ -434,6 +434,8 @@ function TilePreview({
   Icon,
   view,
   unit,
+  readings,
+  isMocked,
 }: {
   name: string;
   pin: string;
@@ -441,8 +443,15 @@ function TilePreview({
   Icon: React.ComponentType<{ className?: string }>;
   view: SensorView;
   unit: string;
+  readings: { id: number; ts: string; payload: Record<string, number> }[];
+  isMocked: boolean;
 }) {
   const isButton = view === "button";
+  const latest = readings[readings.length - 1];
+  const entries = latest ? Object.entries(latest.payload) : [];
+  const primary = entries[0];
+  const rest = entries.slice(1);
+
   return (
     <div className={`glass-tile group aspect-square flex flex-col p-3 text-sm`}>
       <div className="relative z-10 flex items-start justify-between gap-2">
@@ -462,37 +471,96 @@ function TilePreview({
             )}
           </div>
         </div>
+        {isMocked && (
+          <span className="rounded bg-muted/60 px-1.5 py-0.5 text-[9px] uppercase text-muted-foreground">
+            sim
+          </span>
+        )}
       </div>
       <div className="relative z-10 mt-3 flex-1 min-h-0">
         {isButton ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Off</p>
-            <Switch checked={false} className="scale-150 pointer-events-none" />
+            <div className="glass-chip px-4 py-2">
+              <Switch checked={false} className="scale-150 pointer-events-none" />
+            </div>
           </div>
         ) : view === "numeric" ? (
           <div className="flex h-full flex-col justify-between">
-            <div>
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">value</p>
-              <p className="text-3xl font-bold leading-tight">
-                0.00
-                {unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{unit}</span> : null}
-              </p>
-            </div>
-            <p className="mt-2 text-[10px] text-muted-foreground">Waiting for data…</p>
+            {primary && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{primary[0]}</p>
+                <p className="text-3xl font-bold leading-tight">
+                  {typeof primary[1] === "number" ? primary[1].toFixed(2) : String(primary[1])}
+                  {unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{unit}</span> : null}
+                </p>
+              </div>
+            )}
+            {rest.length > 0 && (
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {rest.slice(0, 4).map(([k, v]) => (
+                  <div key={k} className="glass-chip px-2 py-1">
+                    <p className="truncate text-[9px] uppercase text-muted-foreground">{k}</p>
+                    <p className="truncate text-xs font-semibold">
+                      {typeof v === "number" ? v.toFixed(2) : String(v)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
-          <div className="flex h-full items-end gap-1">
-            {[30, 50, 40, 70, 55, 80, 65, 90, 75, 60].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm bg-primary/40"
-                style={{ height: `${h}%` }}
-              />
-            ))}
-          </div>
+          <Sparkline readings={readings} field={primary?.[0] ?? "value"} />
         )}
       </div>
     </div>
   );
 }
+
+function Sparkline({
+  readings,
+  field,
+}: {
+  readings: { payload: Record<string, number> }[];
+  field: string;
+}) {
+  const values = readings.map((r) => Number(r.payload[field] ?? 0));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  return (
+    <div className="flex h-full items-end gap-1">
+      {values.map((v, i) => {
+        const h = ((v - min) / range) * 90 + 10;
+        return (
+          <div
+            key={i}
+            className="flex-1 rounded-sm bg-primary/50"
+            style={{ height: `${h}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+const MOCK_PAYLOADS: Partial<Record<SensorKind, Record<string, number>>> = {
+  pzem04: { power: 285.4, voltage: 230.1, current: 1.24, energy: 12.34, frequency: 50.0 },
+  dht22: { temperature: 23.5, humidity: 48.2 },
+  analog: { value: 2048 },
+  digital: { state: 1 },
+  ultrasonic: { distance: 42.7 },
+  radar: { distance: 180, presence: 1 },
+  relay: { on: 0 },
+};
+
+function jitterPayload(base: Record<string, number>, i: number): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(base)) {
+    const wobble = Math.sin(i * 0.7 + k.length) * 0.06;
+    out[k] = Number((v * (1 + wobble)).toFixed(3));
+  }
+  return out;
+}
+
 
