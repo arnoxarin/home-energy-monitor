@@ -746,12 +746,15 @@ function RelayControl({ sensor }: { sensor: Sensor }) {
     onError: (e) => toast.error((e as Error).message),
   });
   return (
-    <div className="flex items-center justify-between rounded-lg border p-4">
-      <div>
-        <p className="text-sm font-medium">{on ? "ON" : "OFF"}</p>
-        
-      </div>
-      <Switch checked={on} onCheckedChange={(v) => toggle.mutate(v)} />
+    <div className="flex h-full flex-col items-center justify-center gap-3">
+      <p className={`text-xs uppercase tracking-[0.2em] ${on ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+        {on ? "On" : "Off"}
+      </p>
+      <Switch
+        checked={on}
+        onCheckedChange={(v) => toggle.mutate(v)}
+        className="scale-150 data-[state=checked]:bg-primary-foreground/90"
+      />
     </div>
   );
 }
