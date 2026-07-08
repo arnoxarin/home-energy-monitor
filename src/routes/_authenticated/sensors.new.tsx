@@ -53,7 +53,21 @@ function NewSensorPage() {
         state: { pins?: Record<string, string> } | null;
       }[];
     },
+    refetchOnMount: "always",
   });
+
+  // Realtime — refresh pin availability the moment any sensor is added/removed/changed
+  useEffect(() => {
+    const ch = supabase
+      .channel("sensors-new-form")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sensors" }, () => {
+        qc.invalidateQueries({ queryKey: ["sensors"] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
 
 
   const [deviceId, setDeviceId] = useState<string>("");

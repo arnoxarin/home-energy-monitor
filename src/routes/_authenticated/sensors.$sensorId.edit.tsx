@@ -46,7 +46,21 @@ function EditSensorPage() {
       if (error) throw error;
       return data as SensorRow[];
     },
+    refetchOnMount: "always",
   });
+
+  // Realtime — refresh pin availability the moment any sensor is added/removed/changed
+  useEffect(() => {
+    const ch = supabase
+      .channel("sensors-edit-form")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sensors" }, () => {
+        qc.invalidateQueries({ queryKey: ["sensors"] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
 
   const devicesQ = useQuery({
     queryKey: ["devices"],
