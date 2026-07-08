@@ -150,9 +150,6 @@ function Dashboard() {
             <Link to="/devices">
               <Button variant="outline" size="sm">Devices</Button>
             </Link>
-            <Link to="/sensors/new">
-              <Button variant="outline" size="sm">Add sensor</Button>
-            </Link>
             <AddDeviceDialog />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
