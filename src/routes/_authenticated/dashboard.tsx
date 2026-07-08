@@ -268,7 +268,7 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      const label = sensorId === "__all__" ? "all-sensors" : (nameById.get(sensorId) ?? "sensor").replace(/\s+/g, "_");
+      const label = sensorId === "__all__" ? "all-sensors" : (sensorById.get(sensorId)?.name ?? "sensor").replace(/\s+/g, "_");
       a.download = `readings_${label}_${start}_to_${end}.csv`;
       document.body.appendChild(a);
       a.click();
