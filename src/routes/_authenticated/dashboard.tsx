@@ -491,25 +491,18 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        (() => {
-          const groups = [
-            sensors.filter((s) => s.view === "graph"),
-            sensors.filter((s) => s.view === "numeric"),
-            sensors.filter((s) => s.view === "button"),
-          ].filter((g) => g.length > 0);
-          return (
-            <div className="space-y-4 max-w-3xl mx-auto">
-              {groups.map((items, i) => (
-                <div key={i} className="glass-frame grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {items.map((s) => (
-                    <SensorCard key={s.id} sensor={s} />
-                  ))}
-                </div>
-              ))}
-            </div>
-          );
-        })()
+        <div className="glass-frame grid grid-cols-3 sm:grid-cols-4 gap-2 max-w-3xl mx-auto">
+          {[...sensors]
+            .sort((a, b) => {
+              const order = { graph: 0, numeric: 1, button: 2 } as const;
+              return order[a.view] - order[b.view];
+            })
+            .map((s) => (
+              <SensorCard key={s.id} sensor={s} />
+            ))}
+        </div>
       )}
+
 
 
     </section>
@@ -815,18 +808,27 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
         </div>
       )}
       {rest.length > 0 && (
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <div className="mt-1 grid grid-cols-2 gap-1">
           {rest.slice(0, 4).map(([k, v]) => (
-            <div key={k} className="glass-chip px-2 py-1">
+            <div key={k} className="glass-chip px-1.5 py-0.5">
               <p className="truncate text-[9px] uppercase text-muted-foreground">{k}</p>
-              <p className="truncate text-xs font-semibold">
+              <p className="truncate text-[11px] font-semibold">
                 {typeof v === "number" ? v.toFixed(2) : String(v)}
               </p>
             </div>
           ))}
         </div>
       )}
-      <p className="mt-2 text-[10px] text-muted-foreground">Updated {new Date(latest.ts).toLocaleTimeString()}</p>
+      <div className="mt-1 h-6 flex items-end gap-[2px]">
+        {readings.slice(-14).map((r, i) => {
+          const v = Number(r.payload[primary?.[0] ?? "value"] ?? 0);
+          const vals = readings.slice(-14).map((x) => Number(x.payload[primary?.[0] ?? "value"] ?? 0));
+          const min = Math.min(...vals);
+          const max = Math.max(...vals);
+          const h = max - min > 0 ? ((v - min) / (max - min)) * 90 + 10 : 40;
+          return <div key={i} className="flex-1 rounded-sm bg-primary/50" style={{ height: `${h}%` }} />;
+        })}
+      </div>
     </div>
   );
 }
