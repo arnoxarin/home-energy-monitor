@@ -45,6 +45,7 @@ import {
   LogOut,
   Plus,
   Trash2,
+  Pencil,
   Zap,
   Thermometer,
   Power,
