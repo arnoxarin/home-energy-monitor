@@ -188,17 +188,20 @@ function NewSensorPage() {
   const meta = KIND_META[kind];
   const roles = PIN_ROLES[kind];
 
-  // Pins already assigned to other sensors on the selected device.
-  const usedPins = useMemo(() => {
-    const set = new Set<string>();
+  // pin -> sensor name (scoped to the currently selected device).
+  const pinOwners = useMemo(() => {
+    const map = new Map<string, string>();
     for (const s of sensorsQ.data ?? []) {
       if (s.device_id !== deviceId) continue;
-      if (s.pin) set.add(s.pin);
+      if (s.pin) map.set(s.pin, s.name);
       const rolePins = s.state?.pins;
-      if (rolePins) for (const v of Object.values(rolePins)) if (v) set.add(v);
+      if (rolePins) for (const v of Object.values(rolePins)) if (v) map.set(v, s.name);
     }
-    return set;
+    return map;
   }, [sensorsQ.data, deviceId]);
+
+  const usedPins = useMemo(() => new Set(pinOwners.keys()), [pinOwners]);
+
 
 
   useEffect(() => {
