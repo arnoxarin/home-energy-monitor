@@ -176,6 +176,47 @@ function NewSensorPage() {
 
   const kinds = useMemo(() => Object.keys(KIND_META) as SensorKind[], []);
 
+  const primaryPin = pins[roles[0]?.key] ?? "";
+
+  // Try to load real recent readings from any existing sensor on the same
+  // device+pin (helpful when recreating a sensor). Falls back to mocked data.
+  const previewQ = useQuery({
+    queryKey: ["preview-readings", deviceId, primaryPin],
+    enabled: Boolean(deviceId && primaryPin),
+    queryFn: async () => {
+      const { data: matches, error: mErr } = await supabase
+        .from("sensors")
+        .select("id")
+        .eq("device_id", deviceId)
+        .eq("pin", primaryPin)
+        .limit(1);
+      if (mErr) throw mErr;
+      const match = matches?.[0];
+      if (!match) return null;
+      const { data, error } = await supabase
+        .from("sensor_readings")
+        .select("id, ts, payload")
+        .eq("sensor_id", match.id)
+        .order("ts", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? []).reverse() as { id: number; ts: string; payload: Record<string, number> }[];
+    },
+    staleTime: 30_000,
+  });
+
+  const mockedPayload = useMemo(() => MOCK_PAYLOADS[kind] ?? { value: 0 }, [kind]);
+  const realReadings = previewQ.data ?? [];
+  const previewReadings = realReadings.length > 0
+    ? realReadings
+    : Array.from({ length: 10 }, (_, i) => ({
+        id: i,
+        ts: new Date(Date.now() - (9 - i) * 5000).toISOString(),
+        payload: jitterPayload(mockedPayload, i),
+      }));
+  const isMocked = realReadings.length === 0;
+
+
   return (
     <div className="min-h-screen bg-muted/20">
       <header className="border-b bg-background">
