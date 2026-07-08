@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -147,6 +147,9 @@ function Dashboard() {
             <span className="text-lg font-semibold">Voltwatch</span>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/devices">
+              <Button variant="outline" size="sm">Devices</Button>
+            </Link>
             <AddDeviceDialog />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
