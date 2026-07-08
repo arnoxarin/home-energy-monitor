@@ -678,20 +678,34 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
     },
   });
 
+  const isButton = sensor.view === "button";
+  const on = isButton && Boolean((sensor.state as { on?: boolean }).on);
+
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-primary" />
-          <div>
-            <CardTitle className="text-base">{sensor.name}</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {KIND_META[sensor.kind].label}
-              {sensor.pin ? ` · pin ${sensor.pin}` : ""}
+    <div className={`glass-tile group aspect-square flex flex-col p-4 ${on ? "glass-tile-on" : ""}`}>
+      {/* Header */}
+      <div className="relative z-10 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background/40 backdrop-blur-md border border-white/30">
+            <Icon className="h-4 w-4 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight">
+              {sensor.name}
+              {sensor.pin ? (
+                <span className={`ml-1 font-normal ${on ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                  ({sensor.pin})
+                </span>
+              ) : null}
             </p>
+            {!isButton && (
+              <p className={`truncate text-[10px] uppercase tracking-wide ${on ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                {KIND_META[sensor.kind].label}
+              </p>
+            )}
           </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <Link to="/sensors/$sensorId/edit" params={{ sensorId: sensor.id }}>
             <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit sensor">
               <Pencil className="h-3.5 w-3.5" />
@@ -701,17 +715,19 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        {sensor.view === "button" ? (
+      </div>
+
+      {/* Body */}
+      <div className="relative z-10 mt-3 flex-1 min-h-0">
+        {isButton ? (
           <RelayControl sensor={sensor} />
         ) : sensor.view === "numeric" ? (
           <NumericView sensor={sensor} readings={readingsQ.data ?? []} />
         ) : (
           <GraphView sensor={sensor} readings={readingsQ.data ?? []} />
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -730,12 +746,15 @@ function RelayControl({ sensor }: { sensor: Sensor }) {
     onError: (e) => toast.error((e as Error).message),
   });
   return (
-    <div className="flex items-center justify-between rounded-lg border p-4">
-      <div>
-        <p className="text-sm font-medium">{on ? "ON" : "OFF"}</p>
-        
-      </div>
-      <Switch checked={on} onCheckedChange={(v) => toggle.mutate(v)} />
+    <div className="flex h-full flex-col items-center justify-center gap-3">
+      <p className={`text-xs uppercase tracking-[0.2em] ${on ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+        {on ? "On" : "Off"}
+      </p>
+      <Switch
+        checked={on}
+        onCheckedChange={(v) => toggle.mutate(v)}
+        className="scale-150 data-[state=checked]:bg-primary-foreground/90"
+      />
     </div>
   );
 }
@@ -751,19 +770,32 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
   const latest = readings[readings.length - 1];
   if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
   const entries = Object.entries(latest.payload);
+  const primary = entries[0];
+  const rest = entries.slice(1);
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-3">
-        {entries.map(([k, v]) => (
-          <div key={k} className="rounded-lg border p-3">
-            <p className="text-xs uppercase text-muted-foreground">{k}</p>
-            <p className="text-lg font-semibold">
-              {typeof v === "number" ? v.toFixed(2) : String(v)}
-            </p>
-          </div>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">Updated {new Date(latest.ts).toLocaleTimeString()}</p>
+    <div className="flex h-full flex-col justify-between">
+      {primary && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{primary[0]}</p>
+          <p className="text-3xl font-bold leading-tight">
+            {typeof primary[1] === "number" ? (primary[1] as number).toFixed(2) : String(primary[1])}
+            {sensor.unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{sensor.unit}</span> : null}
+          </p>
+        </div>
+      )}
+      {rest.length > 0 && (
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          {rest.slice(0, 4).map(([k, v]) => (
+            <div key={k} className="rounded-md bg-background/40 backdrop-blur-md border border-white/20 px-2 py-1">
+              <p className="truncate text-[9px] uppercase text-muted-foreground">{k}</p>
+              <p className="truncate text-xs font-semibold">
+                {typeof v === "number" ? v.toFixed(2) : String(v)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="mt-2 text-[10px] text-muted-foreground">Updated {new Date(latest.ts).toLocaleTimeString()}</p>
     </div>
   );
 }
@@ -783,24 +815,24 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
   if (!latest) return <p className="text-sm text-muted-foreground">Waiting for data…</p>;
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <p className="text-2xl font-bold">
+    <div className="flex h-full flex-col">
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-2xl font-bold leading-tight">
             {typeof latest.payload[activeField] === "number"
               ? (latest.payload[activeField] as number).toFixed(2)
               : "—"}
-            {sensor.unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{sensor.unit}</span> : null}
+            {sensor.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span> : null}
           </p>
-          <p className="text-xs text-muted-foreground">{activeField}</p>
+          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{activeField}</p>
         </div>
         {availableFields.length > 1 && (
-          <div className="flex flex-wrap gap-1">
-            {availableFields.map((f) => (
+          <div className="flex flex-wrap justify-end gap-1 max-w-[55%]">
+            {availableFields.slice(0, 4).map((f) => (
               <Badge
                 key={f}
                 variant={f === activeField ? "default" : "outline"}
-                className="cursor-pointer"
+                className="cursor-pointer px-1.5 py-0 text-[9px] backdrop-blur-md"
                 onClick={() => setSelected(f)}
               >
                 {f}
@@ -809,13 +841,13 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
           </div>
         )}
       </div>
-      <div className="h-40">
+      <div className="mt-1 flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0 0)" />
-            <XAxis dataKey="t" tick={{ fontSize: 10 }} hide />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip contentStyle={{ fontSize: 12 }} />
+          <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+            <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
+            <YAxis tick={{ fontSize: 9 }} width={28} />
+            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
             <Line type="monotone" dataKey="v" stroke="var(--color-primary)" dot={false} strokeWidth={2} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
