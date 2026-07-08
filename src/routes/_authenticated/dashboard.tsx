@@ -430,7 +430,17 @@ function AddDeviceDialog() {
 function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] }) {
   const qc = useQueryClient();
   const [showKey, setShowKey] = useState(false);
+  const [compact, setCompact] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("dashboard-compact") === "1";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("dashboard-compact", compact ? "1" : "0");
+    }
+  }, [compact]);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+
 
   const deleteDevice = useMutation({
     mutationFn: async () => {
