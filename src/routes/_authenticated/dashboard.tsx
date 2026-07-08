@@ -52,6 +52,7 @@ import {
   Radar,
   Waves,
   Cpu,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -162,6 +163,7 @@ function Dashboard() {
             <Link to="/devices">
               <Button variant="outline" size="sm">Devices</Button>
             </Link>
+            <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
             <AddDeviceDialog />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
@@ -186,6 +188,122 @@ function Dashboard() {
         )}
       </main>
     </div>
+  );
+}
+
+function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
+  const [open, setOpen] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString().slice(0, 10);
+  const [sensorId, setSensorId] = useState<string>("__all__");
+  const [start, setStart] = useState(weekAgo);
+  const [end, setEnd] = useState(today);
+  const [busy, setBusy] = useState(false);
+
+  const runExport = async () => {
+    try {
+      setBusy(true);
+      const startIso = new Date(`${start}T00:00:00`).toISOString();
+      const endIso = new Date(`${end}T23:59:59.999`).toISOString();
+
+      let q = supabase
+        .from("sensor_readings")
+        .select("sensor_id, ts, payload")
+        .gte("ts", startIso)
+        .lte("ts", endIso)
+        .order("ts", { ascending: true });
+      if (sensorId !== "__all__") q = q.eq("sensor_id", sensorId);
+
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = (data ?? []) as { sensor_id: string; ts: string; payload: Record<string, number> }[];
+      if (rows.length === 0) {
+        toast.info("No readings in that range");
+        return;
+      }
+
+      const nameById = new Map(sensors.map((s) => [s.id, s.name]));
+      const fieldSet = new Set<string>();
+      for (const r of rows) for (const k of Object.keys(r.payload ?? {})) fieldSet.add(k);
+      const fields = Array.from(fieldSet).sort();
+
+      const header = ["timestamp", "sensor_id", "sensor_name", ...fields];
+      const escape = (v: unknown) => {
+        const s = v == null ? "" : String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const lines = [header.join(",")];
+      for (const r of rows) {
+        lines.push(
+          [r.ts, r.sensor_id, nameById.get(r.sensor_id) ?? "", ...fields.map((f) => r.payload?.[f] ?? "")]
+            .map(escape)
+            .join(","),
+        );
+      }
+      const csv = lines.join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const label = sensorId === "__all__" ? "all-sensors" : (nameById.get(sensorId) ?? "sensor").replace(/\s+/g, "_");
+      a.download = `readings_${label}_${start}_to_${end}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${rows.length} reading${rows.length === 1 ? "" : "s"}`);
+      setOpen(false);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Download className="mr-1 h-4 w-4" /> Export CSV
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Export sensor readings</DialogTitle>
+          <DialogDescription>Choose a sensor and date range. Data is downloaded as a CSV file.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Sensor</Label>
+            <Select value={sensorId} onValueChange={setSensorId}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All sensors</SelectItem>
+                {sensors.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Start date</Label>
+              <Input type="date" value={start} max={end} onChange={(e) => setStart(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>End date</Label>
+              <Input type="date" value={end} min={start} max={today} onChange={(e) => setEnd(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={runExport} disabled={busy || !start || !end}>
+            {busy ? "Preparing…" : "Download CSV"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
