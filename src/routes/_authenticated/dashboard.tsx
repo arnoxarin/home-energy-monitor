@@ -701,7 +701,7 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
   const on = isButton && Boolean((sensor.state as { on?: boolean }).on);
 
   return (
-    <div className={`glass-tile group aspect-square flex flex-col p-3 text-sm ${on ? "glass-tile-on" : ""}`}>
+    <div className={`glass-tile group aspect-square flex flex-col p-2 text-xs ${on ? "glass-tile-on" : ""}`}>
       {/* Header */}
       <div className="relative z-10 flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
