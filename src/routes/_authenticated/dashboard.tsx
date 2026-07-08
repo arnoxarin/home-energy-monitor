@@ -447,9 +447,12 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
 
   const restoreSensor = useMutation({
     mutationFn: async (snapshot: Sensor) => {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) throw userErr ?? new Error("Not signed in");
       const { error } = await supabase.from("sensors").insert({
         id: snapshot.id,
         device_id: snapshot.device_id,
+        user_id: userData.user.id,
         name: snapshot.name,
         kind: snapshot.kind,
         pin: snapshot.pin,
