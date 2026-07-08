@@ -808,18 +808,27 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
         </div>
       )}
       {rest.length > 0 && (
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <div className="mt-1 grid grid-cols-2 gap-1">
           {rest.slice(0, 4).map(([k, v]) => (
-            <div key={k} className="glass-chip px-2 py-1">
+            <div key={k} className="glass-chip px-1.5 py-0.5">
               <p className="truncate text-[9px] uppercase text-muted-foreground">{k}</p>
-              <p className="truncate text-xs font-semibold">
+              <p className="truncate text-[11px] font-semibold">
                 {typeof v === "number" ? v.toFixed(2) : String(v)}
               </p>
             </div>
           ))}
         </div>
       )}
-      <p className="mt-2 text-[10px] text-muted-foreground">Updated {new Date(latest.ts).toLocaleTimeString()}</p>
+      <div className="mt-1 h-6 flex items-end gap-[2px]">
+        {readings.slice(-14).map((r, i) => {
+          const v = Number(r.payload[primary?.[0] ?? "value"] ?? 0);
+          const vals = readings.slice(-14).map((x) => Number(x.payload[primary?.[0] ?? "value"] ?? 0));
+          const min = Math.min(...vals);
+          const max = Math.max(...vals);
+          const h = max - min > 0 ? ((v - min) / (max - min)) * 90 + 10 : 40;
+          return <div key={i} className="flex-1 rounded-sm bg-primary/50" style={{ height: `${h}%` }} />;
+        })}
+      </div>
     </div>
   );
 }
