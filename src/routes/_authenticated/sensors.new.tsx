@@ -66,11 +66,40 @@ const ADC1_PINS: PinInfo[] = [
   { pin: "39", label: "GPIO 39 / VN (ADC1_3, input only)" },
 ];
 
-// UART on ESP32: the GPIO matrix can route TX to almost any output-capable
-// pin and RX to almost any input-capable pin. UART0 (1/3) is used by USB
-// serial, so we exclude those.
-const UART_TX_PINS: PinInfo[] = ANY_OUTPUT; // TX must drive the line
-const UART_RX_PINS: PinInfo[] = ANY_DIGITAL_IO; // RX just reads
+// ESP32 hardware UART pins.
+// UART0 (GPIO 1 TX / 3 RX) is used by USB serial — not offered.
+// UART1 default pins (9/10) are wired to SPI flash and unusable.
+// UART2 default pins are 16 (RX) / 17 (TX).
+// A handful of additional GPIOs are commonly remapped via the UART matrix
+// and safe to use for RX/TX; only those are listed.
+const UART_RX_PINS: PinInfo[] = [
+  { pin: "16", label: "GPIO 16 (UART2 RX — recommended)" },
+  { pin: "9",  label: "GPIO 9 (UART1 RX — flash pin, avoid)" },
+  { pin: "4",  label: "GPIO 4" },
+  { pin: "13", label: "GPIO 13" },
+  { pin: "14", label: "GPIO 14" },
+  { pin: "25", label: "GPIO 25" },
+  { pin: "26", label: "GPIO 26" },
+  { pin: "27", label: "GPIO 27" },
+  { pin: "32", label: "GPIO 32" },
+  { pin: "33", label: "GPIO 33" },
+  { pin: "34", label: "GPIO 34 (input only)" },
+  { pin: "35", label: "GPIO 35 (input only)" },
+];
+
+const UART_TX_PINS: PinInfo[] = [
+  { pin: "17", label: "GPIO 17 (UART2 TX — recommended)" },
+  { pin: "10", label: "GPIO 10 (UART1 TX — flash pin, avoid)" },
+  { pin: "4",  label: "GPIO 4" },
+  { pin: "13", label: "GPIO 13" },
+  { pin: "14", label: "GPIO 14" },
+  { pin: "25", label: "GPIO 25" },
+  { pin: "26", label: "GPIO 26" },
+  { pin: "27", label: "GPIO 27" },
+  { pin: "32", label: "GPIO 32" },
+  { pin: "33", label: "GPIO 33" },
+];
+
 
 type PinRoleKey = "rx" | "tx" | "data" | "trig" | "echo" | "signal" | "out";
 interface PinRole {
