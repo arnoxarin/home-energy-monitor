@@ -273,7 +273,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
           <Button variant="outline" size="sm" onClick={() => setShowKey((v) => !v)}>
             {showKey ? "Hide" : "Show"} ingest details
           </Button>
-          <Link to="/sensors/new" search={{ device: device.id }}>
+          <Link to="/sensors/new">
             <Button size="sm" variant="outline">
               <Plus className="mr-1 h-4 w-4" /> Add sensor
             </Button>
