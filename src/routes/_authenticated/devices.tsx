@@ -123,12 +123,11 @@ function DevicesPage() {
             <DeviceRow key={d.id} device={d} origin={origin} />
           ))
         )}
-
-        <EspCodeCard origin={origin} sampleKey={(devicesQ.data ?? [])[0]?.ingest_key ?? "YOUR_INGEST_KEY"} />
       </main>
     </div>
   );
 }
+
 
 function NewDeviceDialog({ onCreate }: { onCreate: (name: string) => void }) {
   const [open, setOpen] = useState(false);
