@@ -278,20 +278,29 @@ void refreshConfig() {
   if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return;
 
   HTTPClient http;
+  Serial.printf("[config] GET %s\n", cfgConfigUrl.c_str());
   http.begin(cfgConfigUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // fixes [config] 302
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
   http.addHeader("x-fw-build", FW_BUILD);
   int code = http.GET();
-  if (code != 200) { Serial.printf("[config] %d\n", code); http.end(); return; }
-
   String body = http.getString();
+  Serial.printf("[config] status %d, %d bytes\n", code, body.length());
+  if (code != 200) {
+    Serial.printf("[config] err body: %s\n", body.c_str());
+    http.end();
+    return;
+  }
   http.end();
 
   DynamicJsonDocument doc(4096);
   DeserializationError err = deserializeJson(doc, body);
-  if (err) { Serial.printf("[config] parse err: %s\n", err.c_str()); return; }
+  if (err) {
+    Serial.printf("[config] parse err: %s\n", err.c_str());
+    Serial.printf("[config] raw: %s\n", body.c_str());
+    return;
+  }
 
   tearDownSensors();
   JsonArray arr = doc["sensors"].as<JsonArray>();
