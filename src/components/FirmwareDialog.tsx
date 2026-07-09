@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Cpu, Copy, Download, Zap, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Cpu, Copy, Download, Zap, AlertCircle, CheckCircle2, Settings } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 // Vite bundles the .ino file as a raw string, so the firmware source
 // is always in sync with what's in the repo.
