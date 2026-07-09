@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      device_pair_codes: {
+        Row: {
+          claimed_at: string | null
+          claimed_device_id: string | null
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_device_id?: string | null
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_device_id?: string | null
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       devices: {
         Row: {
           created_at: string

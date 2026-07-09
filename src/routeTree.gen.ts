@@ -19,6 +19,7 @@ import { Route as ApiPublicStateRouteImport } from './routes/api/public/state'
 import { Route as ApiPublicIngestRouteImport } from './routes/api/public/ingest'
 import { Route as ApiPublicFirmwareManifestRouteImport } from './routes/api/public/firmware-manifest'
 import { Route as ApiPublicConfigRouteImport } from './routes/api/public/config'
+import { Route as ApiPublicClaimRouteImport } from './routes/api/public/claim'
 import { Route as AuthenticatedSensorsNewRouteImport } from './routes/_authenticated/sensors.new'
 import { Route as AuthenticatedSensorsSensorIdEditRouteImport } from './routes/_authenticated/sensors.$sensorId.edit'
 import { Route as AuthenticatedDevicesDeviceIdRegisterRouteImport } from './routes/_authenticated/devices.$deviceId.register'
@@ -73,6 +74,11 @@ const ApiPublicConfigRoute = ApiPublicConfigRouteImport.update({
   path: '/api/public/config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicClaimRoute = ApiPublicClaimRouteImport.update({
+  id: '/api/public/claim',
+  path: '/api/public/claim',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSensorsNewRoute = AuthenticatedSensorsNewRouteImport.update({
   id: '/sensors/new',
   path: '/sensors/new',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/devices': typeof AuthenticatedDevicesRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
+  '/api/public/claim': typeof ApiPublicClaimRoute
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/devices': typeof AuthenticatedDevicesRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
+  '/api/public/claim': typeof ApiPublicClaimRoute
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_authenticated/devices': typeof AuthenticatedDevicesRouteWithChildren
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/sensors/new': typeof AuthenticatedSensorsNewRoute
+  '/api/public/claim': typeof ApiPublicClaimRoute
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/devices'
     | '/setup'
     | '/sensors/new'
+    | '/api/public/claim'
     | '/api/public/config'
     | '/api/public/firmware-manifest'
     | '/api/public/ingest'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/devices'
     | '/setup'
     | '/sensors/new'
+    | '/api/public/claim'
     | '/api/public/config'
     | '/api/public/firmware-manifest'
     | '/api/public/ingest'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_authenticated/devices'
     | '/_authenticated/setup'
     | '/_authenticated/sensors/new'
+    | '/api/public/claim'
     | '/api/public/config'
     | '/api/public/firmware-manifest'
     | '/api/public/ingest'
@@ -185,6 +197,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicClaimRoute: typeof ApiPublicClaimRoute
   ApiPublicConfigRoute: typeof ApiPublicConfigRoute
   ApiPublicFirmwareManifestRoute: typeof ApiPublicFirmwareManifestRoute
   ApiPublicIngestRoute: typeof ApiPublicIngestRoute
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/claim': {
+      id: '/api/public/claim'
+      path: '/api/public/claim'
+      fullPath: '/api/public/claim'
+      preLoaderRoute: typeof ApiPublicClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/sensors/new': {
       id: '/_authenticated/sensors/new'
       path: '/sensors/new'
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicClaimRoute: ApiPublicClaimRoute,
   ApiPublicConfigRoute: ApiPublicConfigRoute,
   ApiPublicFirmwareManifestRoute: ApiPublicFirmwareManifestRoute,
   ApiPublicIngestRoute: ApiPublicIngestRoute,

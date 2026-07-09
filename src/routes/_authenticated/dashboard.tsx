@@ -59,6 +59,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
+import { PairDeviceDialog } from "@/components/PairDeviceDialog";
+
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
 import { LastSeenBadge } from "@/components/LastSeenBadge";
@@ -208,7 +210,9 @@ function Dashboard() {
             </Link>
             <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
             <FirmwareDialog />
+            <PairDeviceDialog />
             <AddDeviceDialog />
+
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
             </Button>

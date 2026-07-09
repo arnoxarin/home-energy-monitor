@@ -22,9 +22,12 @@ import {
   CheckCircle2,
   Settings,
   ChevronRight,
+  PlugZap,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { PairDeviceDialog } from "./PairDeviceDialog";
+
 // Vite bundles the .ino file as a raw string, so the firmware source
 // is always in sync with what's in the repo.
 import firmwareSource from "../../firmware/voltwatch/voltwatch.ino?raw";
@@ -51,13 +54,15 @@ const HEADING_FONT = "'Space Grotesk', ui-sans-serif, system-ui, sans-serif";
 const BODY_FONT = "'DM Sans', ui-sans-serif, system-ui, sans-serif";
 
 type DeviceRow = { id: string; name: string; ingest_key: string };
-type StepKey = "build" | "flash" | "advanced";
+type StepKey = "build" | "flash" | "pair" | "advanced";
 
 const STEPS: { key: StepKey; label: string; num: string }[] = [
   { key: "build", num: "01", label: "Build & verify" },
   { key: "flash", num: "02", label: "Flash to device" },
-  { key: "advanced", num: "03", label: "Arduino IDE" },
+  { key: "pair", num: "03", label: "Pair via code" },
+  { key: "advanced", num: "04", label: "Arduino IDE" },
 ];
+
 
 export function FirmwareDialog() {
   const [open, setOpen] = useState(false);
@@ -90,11 +95,14 @@ export function FirmwareDialog() {
     if (typeof window === "undefined") return firmwareSource;
     const origin = window.location.origin;
     const ingestUrl = `${origin}/api/public/ingest`;
+    const claimUrl = `${origin}/api/public/claim`;
     const key = selected?.ingest_key ?? "";
     return firmwareSource
       .replaceAll("__INGEST_URL__", ingestUrl)
-      .replaceAll("__INGEST_KEY__", key);
+      .replaceAll("__INGEST_KEY__", key)
+      .replaceAll("__CLAIM_URL__", claimUrl);
   }, [selected]);
+
 
   useEffect(() => {
     if (!open) return;
@@ -343,6 +351,49 @@ export function FirmwareDialog() {
                   </section>
                 </>
               )}
+
+              {step === "pair" && (
+                <section className="space-y-4">
+                  <h3
+                    className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-900"
+                    style={{ fontFamily: HEADING_FONT }}
+                  >
+                    Pair a freshly-flashed ESP32
+                  </h3>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    Skip creating the device first — flash the generic firmware,
+                    then join the ESP32's <code>Voltwatch-Setup</code> WiFi on
+                    your phone and enter a 6-digit pairing code alongside your
+                    home WiFi. The ESP will register itself into your account
+                    and appear on the dashboard automatically.
+                  </p>
+                  <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-600">
+                    <li>Flash the firmware (any device selection is fine — the ESP will overwrite it during pairing).</li>
+                    <li>Click <span className="font-semibold text-slate-900">Get pairing code</span> below.</li>
+                    <li>On your phone, join WiFi <code>Voltwatch-Setup</code> (pw <code>voltwatch</code>).</li>
+                    <li>In the captive portal, enter your home WiFi + the code, then Save.</li>
+                    <li>Watch this window — the device appears once claim succeeds.</li>
+                  </ol>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <PairDeviceDialog
+                      trigger={
+                        <Button
+                          size="sm"
+                          className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"
+                        >
+                          <PlugZap className="mr-1 h-4 w-4" /> Get pairing code
+                        </Button>
+                      }
+                    />
+                  </div>
+                  <p className="text-[11px] text-[#94a3b8] leading-relaxed">
+                    Pairing codes expire after 10 minutes. Generate a fresh one if
+                    the ESP wasn't ready in time.
+                  </p>
+                </section>
+              )}
+
+
 
               {step === "advanced" && (
                 <section className="space-y-4">

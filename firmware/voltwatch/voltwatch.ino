@@ -49,6 +49,11 @@
 // building manually; the portal will ask for them at first boot.
 #define DEFAULT_INGEST_URL "__INGEST_URL__"
 #define DEFAULT_INGEST_KEY "__INGEST_KEY__"
+// Pairing endpoint (POST { code, fw_version, fw_build }) — used when the
+// firmware wasn't personalized for a specific device. Returns ingest_url +
+// ingest_key which are then persisted.
+#define DEFAULT_CLAIM_URL  "__CLAIM_URL__"
+
 
 static bool isPlaceholder(const String& s) {
   return s.length() == 0 || s.startsWith("__") ;
@@ -59,6 +64,8 @@ Preferences prefs;
 String cfgIngest;     // .../api/public/ingest
 String cfgKey;        // device ingest key
 String cfgConfigUrl;  // derived: .../api/public/config
+String cfgClaimUrl;   // .../api/public/claim  (pairing endpoint)
+
 
 const char* AP_NAME = "Voltwatch-Setup";
 const char* AP_PASS = "voltwatch";
@@ -168,21 +175,34 @@ void applySensor(int i) {
 }
 
 // ---------- WiFi + captive portal ----------
+// Forward decl: attempts to redeem a 6-digit pairing code against the
+// server, returning true when it successfully learned an ingest URL + key.
+bool claimWithCode(const String& code);
+
 void startConfigPortal(bool onDemand) {
   WiFiManager wm;
 
   // Only expose endpoint/key fields when they aren't already baked into
   // this firmware build. When the dashboard personalized the .ino, the
   // portal is WiFi-only.
-  bool needEndpoint = isPlaceholder(String(DEFAULT_INGEST_URL));
-  bool needKey      = isPlaceholder(String(DEFAULT_INGEST_KEY));
+  bool haveEndpoint = !isPlaceholder(String(DEFAULT_INGEST_URL));
+  bool haveKey      = !isPlaceholder(String(DEFAULT_INGEST_KEY));
+  bool haveClaim    = !isPlaceholder(String(DEFAULT_CLAIM_URL));
+  bool needEndpoint = !haveEndpoint;
+  bool needKey      = !haveKey;
 
   WiFiManagerParameter pEndpoint("endpoint", "Ingest URL (https://.../api/public/ingest)",
                                  cfgIngest.c_str(), 200);
   WiFiManagerParameter pKey("key", "Device ingest key",
                             cfgKey.c_str(), 80);
+  // Pairing code (6 digits from the dashboard). Always offered when the
+  // firmware knows how to reach a claim endpoint — either baked in, or
+  // once the user has typed an ingest URL (from which we derive it).
+  WiFiManagerParameter pCode("paircode", "Pairing code (6 digits, optional)", "", 8);
+  bool offerCode = haveClaim || needEndpoint; // if no ingest baked in, user can pair after entering URL
   if (needEndpoint) wm.addParameter(&pEndpoint);
   if (needKey)      wm.addParameter(&pKey);
+  if (offerCode)    wm.addParameter(&pCode);
   wm.setConfigPortalTimeout(300);
 
   // Blink LED fast while the portal is up so the user knows to connect
@@ -202,8 +222,22 @@ void startConfigPortal(bool onDemand) {
   prefs.putString("key",    cfgKey);
   prefs.end();
   Serial.println("[cfg] saved");
+
+  // If a pairing code was entered (and we still lack an ingest key), redeem
+  // it now that WiFi is up. On success this also persists ingest URL/key.
+  String code = String(pCode.getValue());
+  code.trim();
+  if (offerCode && code.length() == 6 && cfgKey.length() == 0) {
+    Serial.println("[cfg] attempting pairing claim");
+    if (claimWithCode(code)) {
+      Serial.println("[cfg] paired ok");
+    } else {
+      Serial.println("[cfg] pairing failed");
+    }
+  }
   setLed(LED_ONLINE);
 }
+
 
 void loadConfig() {
   prefs.begin("voltwatch", true);
@@ -215,6 +249,7 @@ void loadConfig() {
   // the .ino was personalized for a specific device by the dashboard.
   String defUrl = String(DEFAULT_INGEST_URL);
   String defKey = String(DEFAULT_INGEST_KEY);
+  String defClaim = String(DEFAULT_CLAIM_URL);
   if (cfgIngest.length() == 0 && !isPlaceholder(defUrl)) cfgIngest = defUrl;
   if (cfgKey.length()    == 0 && !isPlaceholder(defKey)) cfgKey    = defKey;
 
@@ -222,7 +257,65 @@ void loadConfig() {
   cfgConfigUrl = cfgIngest;
   int slash = cfgConfigUrl.lastIndexOf('/');
   if (slash > 0) cfgConfigUrl = cfgConfigUrl.substring(0, slash) + "/config";
+
+  // Prefer a baked-in claim URL; otherwise derive one from the ingest URL.
+  if (!isPlaceholder(defClaim)) {
+    cfgClaimUrl = defClaim;
+  } else if (cfgIngest.length() > 0 && slash > 0) {
+    cfgClaimUrl = cfgIngest.substring(0, slash) + "/claim";
+  }
 }
+
+// ---------- Pairing (claim) ----------
+// POSTs {"code":"123456","fw_version":..,"fw_build":..} to the claim URL,
+// and on 200 saves the returned ingest_url + ingest_key so the ESP starts
+// posting readings without any further setup.
+bool claimWithCode(const String& code) {
+  if (cfgClaimUrl.length() == 0) {
+    Serial.println("[claim] no claim URL known");
+    return false;
+  }
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  DynamicJsonDocument body(256);
+  body["code"] = code;
+  body["fw_version"] = FW_VERSION;
+  body["fw_build"] = FW_BUILD;
+  String out;
+  serializeJson(body, out);
+
+  HTTPClient http;
+  http.begin(cfgClaimUrl);
+  http.addHeader("Content-Type", "application/json");
+  int status = http.POST(out);
+  Serial.printf("[claim] status %d\n", status);
+  if (status != 200) { http.end(); return false; }
+
+  String resp = http.getString();
+  http.end();
+
+  DynamicJsonDocument r(1024);
+  if (deserializeJson(r, resp)) {
+    Serial.println("[claim] bad JSON");
+    return false;
+  }
+  const char* ingestUrl = r["ingest_url"] | "";
+  const char* ingestKey = r["ingest_key"] | "";
+  if (!*ingestUrl || !*ingestKey) return false;
+
+  cfgIngest = String(ingestUrl);
+  cfgKey    = String(ingestKey);
+  cfgConfigUrl = cfgIngest;
+  int s2 = cfgConfigUrl.lastIndexOf('/');
+  if (s2 > 0) cfgConfigUrl = cfgConfigUrl.substring(0, s2) + "/config";
+
+  prefs.begin("voltwatch", false);
+  prefs.putString("ingest", cfgIngest);
+  prefs.putString("key",    cfgKey);
+  prefs.end();
+  return true;
+}
+
 
 // ---------- Config fetch: rebuild sensor table ----------
 void refreshConfig() {
