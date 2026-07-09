@@ -148,6 +148,24 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  /* Dark-mode overrides for tile/chart tokens */
+  --tile-bg: var(--card);
+  --tile-border: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --tile-shadow: 0 10px 24px -14px color-mix(in oklab, black 70%, transparent);
+  --tile-shadow-hover: 0 14px 28px -14px color-mix(in oklab, black 80%, transparent);
+  --tile-on-bg: oklch(0.62 0.16 160);
+  --tile-on-fg: oklch(0.99 0.01 160);
+  --tile-on-border: color-mix(in oklab, var(--tile-on-bg) 70%, transparent);
+  --chip-bg: color-mix(in oklab, var(--card) 70%, transparent);
+  --chip-border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --chip-shadow: 0 6px 14px -10px color-mix(in oklab, black 60%, transparent);
+  --frame-bg-start: color-mix(in oklab, var(--card) 55%, transparent);
+  --frame-bg-end: color-mix(in oklab, var(--primary) 8%, transparent);
+  --frame-border: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --chart-grid: color-mix(in oklab, var(--foreground) 18%, transparent);
+  --chart-line: var(--primary);
+  --chart-line-muted: var(--foreground);
 }
 
 @layer base {
