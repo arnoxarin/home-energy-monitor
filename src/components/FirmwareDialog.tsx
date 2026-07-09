@@ -95,11 +95,14 @@ export function FirmwareDialog() {
     if (typeof window === "undefined") return firmwareSource;
     const origin = window.location.origin;
     const ingestUrl = `${origin}/api/public/ingest`;
+    const claimUrl = `${origin}/api/public/claim`;
     const key = selected?.ingest_key ?? "";
     return firmwareSource
       .replaceAll("__INGEST_URL__", ingestUrl)
-      .replaceAll("__INGEST_KEY__", key);
+      .replaceAll("__INGEST_KEY__", key)
+      .replaceAll("__CLAIM_URL__", claimUrl);
   }, [selected]);
+
 
   useEffect(() => {
     if (!open) return;
