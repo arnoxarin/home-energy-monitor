@@ -32,8 +32,6 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <DHT.h>
-#include "voltwatch.h"  // struct Sensor lives here so Arduino's auto-generated
-                        // function prototypes at the top of the .ino can see it
 
 // ---------- Firmware identity ----------
 // Bump FW_VERSION whenever behavior changes (LED logic, protocol, sensors).
