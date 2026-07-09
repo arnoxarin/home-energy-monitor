@@ -417,6 +417,7 @@ void collectAndPost() {
 
   HTTPClient http;
   http.begin(cfgIngest);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
