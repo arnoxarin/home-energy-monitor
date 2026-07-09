@@ -228,8 +228,12 @@ void startConfigPortal(bool onDemand) {
   code.trim();
   if (offerCode && code.length() == 6 && cfgKey.length() == 0) {
     Serial.println("[cfg] attempting pairing claim");
-    if (claimWithCode(code)) Serial.println("[cfg] paired ok");
-    else                     Serial.println("[cfg] pairing failed");
+    if (claimWithCode(code)) {
+      Serial.println("[cfg] paired ok, fetching config with backoff");
+      refreshConfigWithBackoff(7, "post-claim");
+    } else {
+      Serial.println("[cfg] pairing failed");
+    }
   }
   setLed(LED_ONLINE);
 }
