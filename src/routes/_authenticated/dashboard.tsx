@@ -59,6 +59,7 @@ import {
   Download,
   LayoutGrid,
   Rows3,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
