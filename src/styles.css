@@ -199,11 +199,7 @@
 }
 
 @utility glass-tile-on {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklab, #10b981 65%, transparent) 0%,
-    color-mix(in oklab, #059669 30%, transparent) 100%
-  );
+  background: #10b981;
   color: #ffffff;
 }
 
