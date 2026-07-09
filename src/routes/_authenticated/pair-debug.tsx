@@ -80,6 +80,21 @@ function PairDebugPage() {
     },
   });
 
+  const { data: attempts, refetch: refetchAttempts } = useQuery({
+    queryKey: ["my-ingest-attempts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ingest_attempts")
+        .select("id, ts, endpoint, key_masked, key_len, matched, device_id, fw_version, fw_build, ip, status")
+        .order("ts", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 5000,
+  });
+
+
   async function check() {
     if (!/^\d{6}$/.test(code)) {
       setResult({ ok: false, error: "Enter exactly 6 digits" });
@@ -247,6 +262,72 @@ function PairDebugPage() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Last received x-ingest-key headers</CardTitle>
+              <CardDescription>
+                Live log of every ingest and config request the server saw from
+                your ESP. Auto-refreshes every 5s. Keys are masked as
+                <code className="mx-1">prefix…suffix</code> and match your
+                device's full key shown above.
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetchAttempts()}>
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!attempts?.length ? (
+            <p className="text-sm text-muted-foreground">
+              No matched attempts yet. If the ESP is running and hitting the
+              right host, entries will appear within a few seconds.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {attempts.map((a) => {
+                const dev = myDevices?.find((d) => d.id === a.device_id);
+                return (
+                  <div
+                    key={a.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant={a.status && a.status < 300 ? "secondary" : "destructive"}
+                      >
+                        {a.endpoint} · {a.status ?? "?"}
+                      </Badge>
+                      <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs">
+                        {a.key_masked || "(empty)"}
+                      </code>
+                      <span className="text-xs text-muted-foreground">
+                        {a.key_len} chars
+                      </span>
+                      {dev ? (
+                        <span className="text-xs">→ {dev.name}</span>
+                      ) : (
+                        <Badge variant="destructive">unmatched</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      {a.fw_version && (
+                        <span>fw {a.fw_version}</span>
+                      )}
+                      {a.ip && <span>ip {a.ip}</span>}
+                      <span>{new Date(a.ts).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
+
   );
 }
