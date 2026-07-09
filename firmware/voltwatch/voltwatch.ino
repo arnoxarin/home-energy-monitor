@@ -195,6 +195,34 @@ void startConfigPortal(bool onDemand) {
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
   wm.setSaveConfigCallback([]() { setLed(LED_CONNECTING); });
 
+  // If the app baked WiFi credentials into this firmware, try them first
+  // so the user doesn't need to open the captive portal at all.
+  String bakedSsid = String(DEFAULT_WIFI_SSID);
+  String bakedPass = String(DEFAULT_WIFI_PASS);
+  if (!onDemand && !isPlaceholder(bakedSsid) && WiFi.SSID().length() == 0) {
+    Serial.printf("[wifi] trying baked SSID \"%s\"\n", bakedSsid.c_str());
+    setLed(LED_CONNECTING);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(bakedSsid.c_str(), isPlaceholder(bakedPass) ? "" : bakedPass.c_str());
+    unsigned long t0 = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) {
+      updateLed();
+      delay(100);
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("[wifi] baked creds worked, skipping portal");
+      setLed(LED_ONLINE);
+      if (needEndpoint) cfgIngest = String(DEFAULT_INGEST_URL);
+      if (needKey)      cfgKey    = String(DEFAULT_INGEST_KEY);
+      prefs.begin("voltwatch", false);
+      prefs.putString("ingest", cfgIngest);
+      prefs.putString("key",    cfgKey);
+      prefs.end();
+      return;
+    }
+    Serial.println("[wifi] baked creds failed, falling back to portal");
+  }
+
   bool ok = onDemand ? wm.startConfigPortal(AP_NAME, AP_PASS)
                      : wm.autoConnect(AP_NAME, AP_PASS);
   if (!ok) { Serial.println("[cfg] portal timed out"); ESP.restart(); }
