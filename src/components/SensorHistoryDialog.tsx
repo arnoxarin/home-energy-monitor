@@ -564,3 +564,33 @@ function triggerDownload(blob: Blob, filename: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+// Ease the Y-axis domain from its previous value to the new target using
+// rAF so range switches (Day/Week/Month/Year) glide instead of snapping.
+function useTweenedDomain(target: [number, number], durationMs = 500): [number, number] {
+  const [current, setCurrent] = useState<[number, number]>(target);
+  const fromRef = useRef<[number, number]>(target);
+  const startRef = useRef<number>(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    fromRef.current = current;
+    startRef.current = performance.now();
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+    const step = (now: number) => {
+      const p = Math.min(1, (now - startRef.current) / durationMs);
+      const k = ease(p);
+      const [f0, f1] = fromRef.current;
+      const [t0, t1] = target;
+      setCurrent([f0 + (t0 - f0) * k, f1 + (t1 - f1) * k]);
+      if (p < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target[0], target[1], durationMs]);
+
+  return current;
+}
