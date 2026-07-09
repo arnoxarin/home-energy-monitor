@@ -27,6 +27,19 @@ export const Route = createFileRoute("/api/public/config")({
           .maybeSingle();
         if (dErr || !device) return new Response("Invalid key", { status: 401, headers: cors });
 
+        const fwVersion = request.headers.get("x-fw-version");
+        const fwBuild = request.headers.get("x-fw-build");
+        if (fwVersion) {
+          await supabaseAdmin
+            .from("devices")
+            .update({
+              fw_version: fwVersion,
+              fw_build: fwBuild,
+              fw_reported_at: new Date().toISOString(),
+            })
+            .eq("id", device.id);
+        }
+
         const { data: sensors } = await supabaseAdmin
           .from("sensors")
           .select("id, name, kind, pin, state")

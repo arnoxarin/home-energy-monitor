@@ -43,9 +43,18 @@ export const Route = createFileRoute("/api/public/ingest")({
           .maybeSingle();
         if (dErr || !device) return new Response("Invalid key", { status: 401, headers: cors });
 
+        const fwVersion = request.headers.get("x-fw-version");
+        const fwBuild = request.headers.get("x-fw-build");
+        const nowIso = new Date().toISOString();
+        const deviceUpdate: Record<string, string | null> = { last_seen_at: nowIso };
+        if (fwVersion) {
+          deviceUpdate.fw_version = fwVersion;
+          deviceUpdate.fw_build = fwBuild;
+          deviceUpdate.fw_reported_at = nowIso;
+        }
         await supabaseAdmin
           .from("devices")
-          .update({ last_seen_at: new Date().toISOString() })
+          .update(deviceUpdate)
           .eq("id", device.id);
 
         const { data: sensors } = await supabaseAdmin
