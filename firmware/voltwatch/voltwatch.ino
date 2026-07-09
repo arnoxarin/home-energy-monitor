@@ -236,8 +236,9 @@ void startConfigPortal(bool onDemand) {
 
 void loadConfig() {
   prefs.begin("voltwatch", true);
-  cfgIngest = prefs.getString("ingest", "");
-  cfgKey    = prefs.getString("key", "");
+  cfgIngest   = prefs.getString("ingest", "");
+  cfgKey      = prefs.getString("key", "");
+  cfgHostname = prefs.getString("hostname", "");
   prefs.end();
 
   String defUrl   = String(DEFAULT_INGEST_URL);
