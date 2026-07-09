@@ -36,6 +36,7 @@ import { Activity, ArrowLeft, Copy, Eye, EyeOff, KeyRound, Link2, Pencil, Plus, 
 import { toast } from "sonner";
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
+import { LastSeenBadge } from "@/components/LastSeenBadge";
 
 export const Route = createFileRoute("/_authenticated/devices")({
   component: DevicesPage,
@@ -208,6 +209,7 @@ function DeviceRow({ device, origin }: { device: Device; origin: string }) {
                   build={device.fw_build}
                   reportedAt={device.fw_reported_at}
                 />
+                <LastSeenBadge lastSeenAt={device.last_seen_at} />
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(true)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>

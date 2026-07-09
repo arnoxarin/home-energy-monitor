@@ -61,6 +61,7 @@ import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
+import { LastSeenBadge } from "@/components/LastSeenBadge";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -507,6 +508,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
               build={device.fw_build}
               reportedAt={device.fw_reported_at}
             />
+            <LastSeenBadge lastSeenAt={device.last_seen_at} />
           </h2>
           <p className="text-xs text-muted-foreground">
             {device.last_seen_at ? `Last seen ${new Date(device.last_seen_at).toLocaleString()}` : "Never seen"}
