@@ -192,7 +192,58 @@ void startConfigPortal(bool onDemand) {
   if (needKey)      wm.addParameter(&pKey);
   if (offerCode)    wm.addParameter(&pCode);
   wm.addParameter(&pHost);
+
+  // ---- Diagnostics block: injected as a "custom" menu item in the portal.
+  // Reads whatever the last refreshConfig() saved into Preferences so the
+  // user can see what URL was hit, the HTTP status, response length, and
+  // the first 200 bytes of the body — right in the captive portal, no
+  // Serial Monitor needed.
+  prefs.begin("voltwatch", true);
+  String dUrl    = prefs.getString("diag_url",  "(none yet)");
+  int    dStatus = prefs.getInt   ("diag_status", 0);
+  String dSnip   = prefs.getString("diag_snip", "");
+  int    dLen    = prefs.getInt   ("diag_len",   0);
+  String dNote   = prefs.getString("diag_note", "(no config fetch attempted yet)");
+  unsigned long dTs = prefs.getULong("diag_ts", 0);
+  prefs.end();
+
+  // HTML-escape the response snippet so tags in the body render as text.
+  String snipEsc;
+  snipEsc.reserve(dSnip.length() + 32);
+  for (size_t i = 0; i < dSnip.length(); i++) {
+    char c = dSnip[i];
+    if      (c == '<')  snipEsc += "&lt;";
+    else if (c == '>')  snipEsc += "&gt;";
+    else if (c == '&')  snipEsc += "&amp;";
+    else if (c == '"')  snipEsc += "&quot;";
+    else if ((uint8_t)c < 0x20 && c != '\n' && c != '\r' && c != '\t') snipEsc += '.';
+    else snipEsc += c;
+  }
+
+  static String diagHtml;   // must outlive setCustomMenuHTML call
+  diagHtml  = "<hr><h3>Last config fetch</h3>";
+  diagHtml += "<p style='margin:4px 0'><b>URL:</b><br><code style='word-break:break-all'>";
+  diagHtml += dUrl;
+  diagHtml += "</code></p>";
+  diagHtml += "<p style='margin:4px 0'><b>HTTP status:</b> ";
+  diagHtml += String(dStatus);
+  diagHtml += " &nbsp; <b>bytes:</b> ";
+  diagHtml += String(dLen);
+  diagHtml += " &nbsp; <b>note:</b> ";
+  diagHtml += dNote;
+  diagHtml += "</p>";
+  diagHtml += "<p style='margin:4px 0'><b>First 200 bytes of response:</b></p>";
+  diagHtml += "<pre style='background:#111;color:#0f0;padding:8px;overflow:auto;"
+              "max-height:180px;font-size:11px;white-space:pre-wrap;word-break:break-all'>";
+  diagHtml += snipEsc.length() ? snipEsc : String("(empty)");
+  diagHtml += "</pre>";
+  diagHtml += "<p style='margin:4px 0;font-size:11px;color:#666'>"
+              "Recorded ~" + String((millis() / 1000) - dTs) + "s before portal opened. "
+              "FW " FW_VERSION " · " FW_BUILD "</p>";
+  wm.setCustomMenuHTML(diagHtml.c_str());
+
   wm.setConfigPortalTimeout(300);
+
 
   setLed(LED_PORTAL);
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
@@ -310,10 +361,26 @@ bool claimWithCode(const String& code) {
 }
 
 // ---------- Config fetch: rebuild sensor table ----------
+// Persist last diagnostic result so the captive portal can show what
+// happened on the previous config fetch (URL, HTTP status, first 200 bytes).
+static void saveConfigDiag(const String& url, int status, const String& body, const String& note) {
+  prefs.begin("voltwatch", false);
+  prefs.putString("diag_url",    url);
+  prefs.putInt   ("diag_status", status);
+  prefs.putString("diag_snip",   body.substring(0, 200));
+  prefs.putInt   ("diag_len",    body.length());
+  prefs.putString("diag_note",   note);
+  prefs.putULong ("diag_ts",     millis() / 1000);
+  prefs.end();
+}
+
 // Returns true when a JSON config was fetched and parsed (even if the sensor
 // list is empty — a valid empty config still counts as "server reachable").
 bool refreshConfig() {
-  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return false;
+  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) {
+    saveConfigDiag(cfgConfigUrl, 0, "", "wifi down or no URL");
+    return false;
+  }
 
   HTTPClient http;
   Serial.printf("[config] GET %s\n", cfgConfigUrl.c_str());
@@ -328,6 +395,7 @@ bool refreshConfig() {
   if (code != 200) {
     Serial.printf("[config] err body: %s\n", body.c_str());
     http.end();
+    saveConfigDiag(cfgConfigUrl, code, body, "non-200");
     return false;
   }
   http.end();
@@ -342,6 +410,7 @@ bool refreshConfig() {
     Serial.println("[config] your ingest URL host isn't serving the API route.");
     Serial.println("[config] use https://project--<project-id>.lovable.app/api/public/config");
     Serial.println("[config] (or the -dev.lovable.app variant for preview).");
+    saveConfigDiag(cfgConfigUrl, code, body, "SPA HTML - wrong host");
     return false;
   }
 
@@ -350,6 +419,7 @@ bool refreshConfig() {
   if (err) {
     Serial.printf("[config] parse err: %s\n", err.c_str());
     Serial.printf("[config] first 300 chars: %s\n", body.substring(0, 300).c_str());
+    saveConfigDiag(cfgConfigUrl, code, body, String("JSON parse: ") + err.c_str());
     return false;
   }
 
@@ -387,6 +457,7 @@ bool refreshConfig() {
     sensorCount++;
   }
   Serial.printf("[config] %d sensor(s) loaded\n", sensorCount);
+  saveConfigDiag(cfgConfigUrl, code, body, String("OK, ") + sensorCount + " sensor(s)");
   return true;
 }
 
