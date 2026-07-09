@@ -1,9 +1,14 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 type Theme = "light" | "dark";
 const STORAGE_KEY = "voltwatch-theme";
 
-type Ctx = { theme: Theme; setTheme: (t: Theme) => void; toggle: () => void };
+type Origin = { x: number; y: number } | null;
+type Ctx = {
+  theme: Theme;
+  setTheme: (t: Theme, origin?: Origin) => void;
+  toggle: (origin?: Origin) => void;
+};
 const ThemeContext = createContext<Ctx | undefined>(undefined);
 
 function applyTheme(t: Theme) {
@@ -12,9 +17,33 @@ function applyTheme(t: Theme) {
   document.documentElement.style.colorScheme = t;
 }
 
+function commitTheme(t: Theme, origin: Origin) {
+  if (typeof document === "undefined") {
+    applyTheme(t);
+    return;
+  }
+  const root = document.documentElement;
+  const x = origin?.x ?? window.innerWidth - 40;
+  const y = origin?.y ?? 40;
+  root.style.setProperty("--tt-x", `${x}px`);
+  root.style.setProperty("--tt-y", `${y}px`);
+
+  // @ts-expect-error - View Transitions API is not in all TS libs yet
+  const startViewTransition: undefined | ((cb: () => void) => unknown) =
+    document.startViewTransition?.bind(document);
+
+  const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+  if (!startViewTransition || prefersReduced) {
+    applyTheme(t);
+    return;
+  }
+  startViewTransition(() => applyTheme(t));
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Always start as "light" for SSR/first paint; real value applied in effect.
   const [theme, setThemeState] = useState<Theme>("light");
+  const initialized = useRef(false);
 
   useEffect(() => {
     let initial: Theme = "light";
@@ -30,11 +59,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     setThemeState(initial);
     applyTheme(initial);
+    initialized.current = true;
   }, []);
 
-  const setTheme = (t: Theme) => {
+  const setTheme = (t: Theme, origin: Origin = null) => {
     setThemeState(t);
-    applyTheme(t);
+    if (initialized.current) {
+      commitTheme(t, origin);
+    } else {
+      applyTheme(t);
+    }
     try {
       localStorage.setItem(STORAGE_KEY, t);
     } catch {
@@ -44,7 +78,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider
-      value={{ theme, setTheme, toggle: () => setTheme(theme === "dark" ? "light" : "dark") }}
+      value={{
+        theme,
+        setTheme,
+        toggle: (origin) => setTheme(theme === "dark" ? "light" : "dark", origin ?? null),
+      }}
     >
       {children}
     </ThemeContext.Provider>
