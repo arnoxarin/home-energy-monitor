@@ -46,15 +46,18 @@ export const Route = createFileRoute("/api/public/ingest")({
         const fwVersion = request.headers.get("x-fw-version");
         const fwBuild = request.headers.get("x-fw-build");
         const nowIso = new Date().toISOString();
-        const deviceUpdate: Record<string, string | null> = { last_seen_at: nowIso };
-        if (fwVersion) {
-          deviceUpdate.fw_version = fwVersion;
-          deviceUpdate.fw_build = fwBuild;
-          deviceUpdate.fw_reported_at = nowIso;
-        }
         await supabaseAdmin
           .from("devices")
-          .update(deviceUpdate)
+          .update(
+            fwVersion
+              ? {
+                  last_seen_at: nowIso,
+                  fw_version: fwVersion,
+                  fw_build: fwBuild,
+                  fw_reported_at: nowIso,
+                }
+              : { last_seen_at: nowIso },
+          )
           .eq("id", device.id);
 
         const { data: sensors } = await supabaseAdmin
