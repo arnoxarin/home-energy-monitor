@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Activity, ArrowLeft, Copy, Eye, EyeOff, KeyRound, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 
 export const Route = createFileRoute("/_authenticated/devices")({
   component: DevicesPage,
@@ -195,6 +196,7 @@ function DeviceRow({ device, origin }: { device: Device; origin: string }) {
           ) : (
             <>
               <CardTitle className="text-lg flex items-center gap-2">
+                <DeviceStatusDot lastSeenAt={device.last_seen_at} />
                 {device.name}
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(true)}>
                   <Pencil className="h-3.5 w-3.5" />

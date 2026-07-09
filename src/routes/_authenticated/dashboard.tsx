@@ -59,6 +59,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
+import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -493,7 +494,10 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-semibold">{device.name}</h2>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <DeviceStatusDot lastSeenAt={device.last_seen_at} />
+            {device.name}
+          </h2>
           <p className="text-xs text-muted-foreground">
             {device.last_seen_at ? `Last seen ${new Date(device.last_seen_at).toLocaleString()}` : "Never seen"}
           </p>
