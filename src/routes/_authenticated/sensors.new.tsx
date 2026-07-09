@@ -236,9 +236,10 @@ function NewSensorPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10 md:px-12 md:py-12">
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-12">
           {/* Left: configuration form */}
-          <div className="space-y-10 lg:col-span-7">
+          <div className="space-y-10 md:col-span-7">
+
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Add new sensor</h1>
               <p className="mt-1 text-sm text-[#7A8794]">
@@ -508,7 +509,7 @@ function NewSensorPage() {
           </div>
 
           {/* Right: docked live preview */}
-          <div className="lg:sticky lg:top-12 lg:col-span-5">
+          <div className="md:sticky md:top-12 md:col-span-5">
             <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1A222B] shadow-2xl">
               <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
                 <span
