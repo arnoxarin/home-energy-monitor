@@ -306,8 +306,10 @@ bool claimWithCode(const String& code) {
 }
 
 // ---------- Config fetch: rebuild sensor table ----------
-void refreshConfig() {
-  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return;
+// Returns true when a JSON config was fetched and parsed (even if the sensor
+// list is empty — a valid empty config still counts as "server reachable").
+bool refreshConfig() {
+  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return false;
 
   HTTPClient http;
   Serial.printf("[config] GET %s\n", cfgConfigUrl.c_str());
