@@ -64,6 +64,8 @@ Preferences prefs;
 String cfgIngest;     // .../api/public/ingest
 String cfgKey;        // device ingest key
 String cfgConfigUrl;  // derived: .../api/public/config
+String cfgClaimUrl;   // .../api/public/claim  (pairing endpoint)
+
 
 const char* AP_NAME = "Voltwatch-Setup";
 const char* AP_PASS = "voltwatch";
