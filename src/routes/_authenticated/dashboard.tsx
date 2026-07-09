@@ -629,7 +629,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
         <>
-          <SensorGraphPanel sensors={sensors} />
+          
           <SortableSensorGrid
             storageKey={`sensor-layout:${device.id}`}
             sensors={sensors}
