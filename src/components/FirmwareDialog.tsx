@@ -26,6 +26,7 @@ import "esp-web-tools";
 import { FirmwareBuildStatus } from "./FirmwareBuildStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { readWifiConfig } from "./WifiConfigCard";
 
 // Let TypeScript know about the custom element from esp-web-tools (React 19)
 declare module "react" {
