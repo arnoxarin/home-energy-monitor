@@ -208,7 +208,9 @@ function Dashboard() {
             </Link>
             <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
             <FirmwareDialog />
+            <PairDeviceDialog />
             <AddDeviceDialog />
+
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
             </Button>
