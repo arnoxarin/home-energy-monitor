@@ -543,7 +543,7 @@ void loop() {
     else if (millis() - pressStart > 3000) {
       startConfigPortal(true);
       loadConfig();
-      refreshConfig();
+      refreshConfigWithBackoff(7, "portal-reopen");
       pressStart = 0;
     }
   } else {
