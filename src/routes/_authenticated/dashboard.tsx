@@ -208,7 +208,7 @@ function Dashboard() {
             <span className="text-lg font-semibold">Voltwatch</span>
           </div>
           <div className="flex items-center gap-2">
-            <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
+            
             <FirmwareDialog />
             <PairDeviceDialog />
             <AddDeviceDialog />
