@@ -88,6 +88,9 @@ function EditSensorPage() {
   const [pins, setPins] = useState<Partial<Record<PinRoleKey, string>>>({});
   const [view, setView] = useState<SensorView>("graph");
   const [unit, setUnit] = useState<string>("");
+  const [alertField, setAlertField] = useState<string>("");
+  const [alertMin, setAlertMin] = useState<string>("");
+  const [alertMax, setAlertMax] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loaded, setLoaded] = useState(false);
 
@@ -98,6 +101,10 @@ function EditSensorPage() {
     setPins((sensor.state?.pins ?? {}) as Partial<Record<PinRoleKey, string>>);
     setView(sensor.view);
     setUnit(sensor.unit ?? "");
+    const a = sensor.state?.alerts;
+    setAlertField(a?.field ?? "");
+    setAlertMin(a?.min == null ? "" : String(a.min));
+    setAlertMax(a?.max == null ? "" : String(a.max));
     setLoaded(true);
   }, [sensor, loaded]);
 
