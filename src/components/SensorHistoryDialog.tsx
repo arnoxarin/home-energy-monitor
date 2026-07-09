@@ -277,7 +277,11 @@ function StatCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border bg-card px-3 py-2">
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="truncate text-sm font-semibold">{value}</p>
+      {/* keyed so the number crossfades when the range/field changes */}
+      <p key={value} className="truncate text-sm font-semibold animate-fade-in">
+        {value}
+      </p>
     </div>
   );
 }
+
