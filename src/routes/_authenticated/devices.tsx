@@ -46,6 +46,9 @@ interface Device {
   ingest_key: string;
   last_seen_at: string | null;
   created_at: string;
+  fw_version: string | null;
+  fw_build: string | null;
+  fw_reported_at: string | null;
 }
 
 function randomHex(bytes = 24) {

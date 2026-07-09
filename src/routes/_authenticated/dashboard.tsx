@@ -78,6 +78,9 @@ interface Device {
   name: string;
   ingest_key: string;
   last_seen_at: string | null;
+  fw_version: string | null;
+  fw_build: string | null;
+  fw_reported_at: string | null;
 }
 interface Sensor {
   id: string;
