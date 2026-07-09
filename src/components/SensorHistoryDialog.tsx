@@ -20,6 +20,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -537,10 +538,19 @@ export function SensorHistoryDialog({
                       }}
                     />
                   )}
+                  <Legend
+                    verticalAlign="top"
+                    align="right"
+                    height={24}
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: 11, color: "var(--muted-foreground)", paddingBottom: 4 }}
+                  />
                   {bucketed.length > 0 && (
                     <Area
                       type="monotone"
                       dataKey="avg"
+                      name={`${activeField}${unit ? ` (${unit})` : ""} · avg`}
                       stroke="var(--color-primary)"
                       strokeWidth={2}
                       fill="url(#histFill)"

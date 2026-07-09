@@ -40,6 +40,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
 } from "recharts";
 import {
   Activity,
@@ -1313,10 +1314,19 @@ function SensorGraphPanel({ sensors }: { sensors: Sensor[] }) {
                   labelStyle={{ color: "var(--muted-foreground)" }}
                 />
               )}
+              <Legend
+                verticalAlign="top"
+                align="right"
+                height={24}
+                iconType="circle"
+                iconSize={8}
+                wrapperStyle={{ fontSize: 11, color: "var(--muted-foreground)", paddingBottom: 4 }}
+              />
               {chartData.length > 0 && (
                 <Area
                   type="monotone"
                   dataKey="v"
+                  name={`${field}${unit ? ` (${unit})` : ""}`}
                   stroke="var(--color-primary)"
                   strokeWidth={2}
                   fill="url(#panelFill)"
