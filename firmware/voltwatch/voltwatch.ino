@@ -192,7 +192,58 @@ void startConfigPortal(bool onDemand) {
   if (needKey)      wm.addParameter(&pKey);
   if (offerCode)    wm.addParameter(&pCode);
   wm.addParameter(&pHost);
+
+  // ---- Diagnostics block: injected as a "custom" menu item in the portal.
+  // Reads whatever the last refreshConfig() saved into Preferences so the
+  // user can see what URL was hit, the HTTP status, response length, and
+  // the first 200 bytes of the body — right in the captive portal, no
+  // Serial Monitor needed.
+  prefs.begin("voltwatch", true);
+  String dUrl    = prefs.getString("diag_url",  "(none yet)");
+  int    dStatus = prefs.getInt   ("diag_status", 0);
+  String dSnip   = prefs.getString("diag_snip", "");
+  int    dLen    = prefs.getInt   ("diag_len",   0);
+  String dNote   = prefs.getString("diag_note", "(no config fetch attempted yet)");
+  unsigned long dTs = prefs.getULong("diag_ts", 0);
+  prefs.end();
+
+  // HTML-escape the response snippet so tags in the body render as text.
+  String snipEsc;
+  snipEsc.reserve(dSnip.length() + 32);
+  for (size_t i = 0; i < dSnip.length(); i++) {
+    char c = dSnip[i];
+    if      (c == '<')  snipEsc += "&lt;";
+    else if (c == '>')  snipEsc += "&gt;";
+    else if (c == '&')  snipEsc += "&amp;";
+    else if (c == '"')  snipEsc += "&quot;";
+    else if ((uint8_t)c < 0x20 && c != '\n' && c != '\r' && c != '\t') snipEsc += '.';
+    else snipEsc += c;
+  }
+
+  static String diagHtml;   // must outlive setCustomMenuHTML call
+  diagHtml  = "<hr><h3>Last config fetch</h3>";
+  diagHtml += "<p style='margin:4px 0'><b>URL:</b><br><code style='word-break:break-all'>";
+  diagHtml += dUrl;
+  diagHtml += "</code></p>";
+  diagHtml += "<p style='margin:4px 0'><b>HTTP status:</b> ";
+  diagHtml += String(dStatus);
+  diagHtml += " &nbsp; <b>bytes:</b> ";
+  diagHtml += String(dLen);
+  diagHtml += " &nbsp; <b>note:</b> ";
+  diagHtml += dNote;
+  diagHtml += "</p>";
+  diagHtml += "<p style='margin:4px 0'><b>First 200 bytes of response:</b></p>";
+  diagHtml += "<pre style='background:#111;color:#0f0;padding:8px;overflow:auto;"
+              "max-height:180px;font-size:11px;white-space:pre-wrap;word-break:break-all'>";
+  diagHtml += snipEsc.length() ? snipEsc : String("(empty)");
+  diagHtml += "</pre>";
+  diagHtml += "<p style='margin:4px 0;font-size:11px;color:#666'>"
+              "Recorded ~" + String((millis() / 1000) - dTs) + "s before portal opened. "
+              "FW " FW_VERSION " · " FW_BUILD "</p>";
+  wm.setCustomMenuHTML(diagHtml.c_str());
+
   wm.setConfigPortalTimeout(300);
+
 
   setLed(LED_PORTAL);
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
