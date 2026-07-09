@@ -27,19 +27,20 @@ function SetupPage() {
   return (
     <div className="min-h-screen bg-muted/20">
       <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-6 py-4">
+        <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-4 sm:px-6">
           <Link to="/dashboard">
-            <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="shrink-0"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Settings2 className="h-5 w-5" />
           </div>
-          <span className="text-lg font-semibold">Setup</span>
+          <span className="truncate text-lg font-semibold">Setup</span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-8 space-y-6">
+      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         <WifiConfigCard />
+
 
         <Card>
           <CardHeader>
