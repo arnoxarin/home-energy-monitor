@@ -32,6 +32,8 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <DHT.h>
+#include "voltwatch.h"  // struct Sensor lives here so Arduino's auto-generated
+                        // function prototypes at the top of the .ino can see it
 
 // ---------- Firmware identity ----------
 // Bump FW_VERSION whenever behavior changes (LED logic, protocol, sensors).
@@ -101,14 +103,7 @@ void updateLed() {
 }
 
 // ---------- Dynamic sensor table ----------
-struct Sensor {
-  String id;
-  String kind;   // "dht22" | "relay" | "analog" | "digital" | "ultrasonic" | ...
-  int    pin;    // primary pin (data / signal / out)
-  int    pinB;   // secondary pin (e.g. ultrasonic ECHO), -1 if unused
-  bool   desiredOn; // for relays
-  DHT*   dht;    // lazily allocated for DHT22
-};
+// struct Sensor is defined in voltwatch.h (see include above).
 Sensor sensors[MAX_SENSORS];
 int sensorCount = 0;
 
