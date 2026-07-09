@@ -137,11 +137,60 @@
     border-color: var(--color-border);
   }
 
+  html {
+    transition: background-color 400ms ease, color 400ms ease;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    transition: background-color 400ms ease, color 400ms ease;
+  }
+
+  /* Smoothly cross-fade themeable surfaces */
+  .theme-transition,
+  .theme-transition * {
+    transition:
+      background-color 400ms ease,
+      border-color 400ms ease,
+      color 300ms ease,
+      fill 300ms ease,
+      stroke 300ms ease,
+      box-shadow 400ms ease !important;
   }
 }
+
+/* View Transitions API: circular reveal from toggle origin */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-reveal 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0% at var(--tt-x, 50%) var(--tt-y, 50%));
+  }
+  to {
+    clip-path: circle(150% at var(--tt-x, 50%) var(--tt-y, 50%));
+  }
+}
+
+@keyframes theme-icon-in {
+  from { transform: rotate(-90deg) scale(0.4); opacity: 0; }
+  to { transform: rotate(0) scale(1); opacity: 1; }
+}
+@keyframes theme-icon-out {
+  from { transform: rotate(0) scale(1); opacity: 1; }
+  to { transform: rotate(90deg) scale(0.4); opacity: 0; }
+}
+
 
 /* Sensor tile — flat solid surface */
 @utility glass-tile {
