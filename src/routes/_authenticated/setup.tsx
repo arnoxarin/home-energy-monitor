@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Cpu, Wifi, Settings2, RefreshCw } from "lucide-react";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
+import { WifiConfigCard } from "@/components/WifiConfigCard";
 
 export const Route = createFileRoute("/_authenticated/setup")({
   component: SetupPage,
