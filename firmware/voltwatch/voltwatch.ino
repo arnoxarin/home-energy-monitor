@@ -40,6 +40,20 @@
 #define FW_VERSION "1.1.0"
 #define FW_BUILD   (__DATE__ " " __TIME__)
 
+// ---------- Compile-time defaults ----------
+// These are auto-substituted by the dashboard when you download the .ino
+// for a specific device: the ingest URL becomes your app's origin and the
+// key becomes that device's ingest key. When both are baked in, the WiFi
+// setup portal only asks for WiFi credentials — no URL or key to type.
+// Leave the placeholders (__INGEST_URL__ / __INGEST_KEY__) if you're
+// building manually; the portal will ask for them at first boot.
+#define DEFAULT_INGEST_URL "__INGEST_URL__"
+#define DEFAULT_INGEST_KEY "__INGEST_KEY__"
+
+static bool isPlaceholder(const String& s) {
+  return s.length() == 0 || s.startsWith("__") ;
+}
+
 // ---------- Persistent config ----------
 Preferences prefs;
 String cfgIngest;     // .../api/public/ingest
