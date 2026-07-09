@@ -38,11 +38,15 @@ export function readWifiConfig(): WifiConfig | null {
   }
 }
 
+type SendStatus = "idle" | "loading" | "success" | "error";
+
 export function WifiConfigCard() {
   const [ssid, setSsid] = useState("");
   const [pass, setPass] = useState("");
   const [reveal, setReveal] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState<SendStatus>("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const current = readWifiConfig();
@@ -53,15 +57,50 @@ export function WifiConfigCard() {
     }
   }, []);
 
-  const save = () => {
+  const sendAndApply = async () => {
+    setStatus("loading");
+    setErrorMsg(null);
     const result = wifiSchema.safeParse({ ssid, pass });
     if (!result.success) {
-      toast.error(result.error.issues[0]?.message ?? "Invalid WiFi details");
+      const msg = result.error.issues[0]?.message ?? "Invalid WiFi details";
+      setErrorMsg(msg);
+      setStatus("error");
+      toast.error(msg);
+      window.setTimeout(() => setStatus("idle"), 2500);
       return;
     }
-    window.localStorage.setItem(WIFI_STORAGE_KEY, JSON.stringify(result.data));
-    setSaved(true);
-    toast.success("WiFi saved — next firmware download will include it");
+    try {
+      // Persist locally so the next firmware download bakes these creds in.
+      window.localStorage.setItem(WIFI_STORAGE_KEY, JSON.stringify(result.data));
+      // Verify the app's ingest endpoint is reachable — this is what the
+      // ESP32 will call once it joins the network. A quick pre-flight lets
+      // us surface obvious problems before the user re-flashes.
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 6000);
+      const res = await fetch("/api/public/ingest", {
+        method: "OPTIONS",
+        signal: controller.signal,
+      }).catch((err) => {
+        if ((err as Error).name === "AbortError") {
+          throw new Error("Timed out reaching the ingest endpoint");
+        }
+        throw err;
+      });
+      window.clearTimeout(timer);
+      if (res && res.status >= 500) {
+        throw new Error(`Ingest endpoint returned ${res.status}`);
+      }
+      setSaved(true);
+      setStatus("success");
+      toast.success("WiFi applied — flash firmware to push it to your ESP32");
+      window.setTimeout(() => setStatus("idle"), 2500);
+    } catch (err) {
+      const msg = (err as Error).message || "Failed to apply WiFi settings";
+      setErrorMsg(msg);
+      setStatus("error");
+      toast.error(msg);
+      window.setTimeout(() => setStatus("idle"), 2500);
+    }
   };
 
   const clear = () => {
