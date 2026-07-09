@@ -309,7 +309,7 @@ export function SensorHistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl animate-scale-in">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[95vw] xl:max-w-[1400px] max-h-[95vh] overflow-y-auto animate-scale-in">
         <DialogHeader>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
