@@ -3,10 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Activity, ArrowLeft } from "lucide-react";
@@ -218,209 +215,360 @@ function NewSensorPage() {
 
 
   return (
-    <div className="min-h-screen bg-muted/20">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-6 py-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/dashboard" })}>
+    <div
+      className="min-h-screen w-full bg-[#0F1216] text-[#E5EDF5]"
+      style={{ fontFamily: "'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif" }}
+    >
+      <header className="border-b border-white/5">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-6 py-4 md:px-12">
+          <button
+            onClick={() => navigate({ to: "/dashboard" })}
+            className="grid h-9 w-9 place-items-center rounded-md border border-white/10 bg-[#1A222B] text-[#7A8794] transition-colors hover:border-[#22D3EE]/40 hover:text-[#E5EDF5]"
+            aria-label="Back to dashboard"
+          >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Activity className="h-5 w-5" />
+          </button>
+          <div className="grid h-9 w-9 place-items-center rounded-md bg-[#22D3EE]/10 text-[#22D3EE] ring-1 ring-inset ring-[#22D3EE]/30">
+            <Activity className="h-4 w-4" />
           </div>
-          <span className="text-lg font-semibold">Add sensor</span>
+          <span className="text-lg font-semibold tracking-tight">Add sensor</span>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-8 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>1. Sensor type</CardTitle>
-            <CardDescription>Pick what's wired to your ESP32.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup value={kind} onValueChange={(v) => setKind(v as SensorKind)} className="grid gap-3 sm:grid-cols-2">
-              {kinds.map((k) => {
-                const m = KIND_META[k];
-                const Icon = m.icon;
-                const selected = kind === k;
-                return (
-                  <label
-                    key={k}
-                    htmlFor={`kind-${k}`}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition ${selected ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
-                  >
-                    <RadioGroupItem id={`kind-${k}`} value={k} className="mt-1" />
-                    <Icon className="mt-0.5 h-5 w-5 text-primary" />
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium leading-none">{m.label}</p>
-                      <p className="text-xs text-muted-foreground">{m.description}</p>
-                    </div>
-                  </label>
-                );
-              })}
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>2. Configuration</CardTitle>
-            <CardDescription>
-              Assign the sensor to a device. Only pins the ESP32 can use for each role are listed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Device</Label>
-              {devicesQ.isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading…</p>
-              ) : (devicesQ.data ?? []).length === 0 ? (
-                <p className="text-sm">
-                  No devices yet.{" "}
-                  <Link to="/devices" className="underline">Create one first</Link>.
-                </p>
-              ) : (
-                <Select value={deviceId} onValueChange={setDeviceId}>
-                  <SelectTrigger><SelectValue placeholder="Select device" /></SelectTrigger>
-                  <SelectContent>
-                    {(devicesQ.data ?? []).map((d) => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {errors.device_id && <p className="text-xs text-destructive">{errors.device_id}</p>}
+      <main className="mx-auto max-w-6xl px-6 py-10 md:px-12 md:py-12">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          {/* Left: configuration form */}
+          <div className="space-y-10 lg:col-span-7">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Add new sensor</h1>
+              <p className="mt-1 text-sm text-[#7A8794]">
+                Configure hardware parameters and display settings for a new node.
+              </p>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={meta.label} maxLength={60} />
-              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Pin assignment</p>
-
-              {pinOwners.size > 0 && (
-                <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs">
-                  <p className="font-medium text-foreground">Pins already in use on this device</p>
-                  <ul className="mt-1 space-y-0.5 text-muted-foreground">
-                    {Array.from(pinOwners.entries())
-                      .sort((a, b) => Number(a[0]) - Number(b[0]))
-                      .map(([pin, owner]) => (
-                        <li key={pin}>
-                          GPIO {pin} — <span className="text-foreground">{owner}</span>
-                        </li>
-                      ))}
-                  </ul>
-                  <p className="mt-1">Delete a sensor to free its pins.</p>
-                </div>
-              )}
-
-              {roles.map((role) => {
-                const otherRoleTaken = takenByOtherRole(role.key);
-                const available = role.options.filter((o) => !usedPins.has(o.pin) && !otherRoleTaken.has(o.pin));
-                const selectedPin = pins[role.key];
-                const selectedOwner = selectedPin ? pinOwners.get(selectedPin) : undefined;
-                return (
-                  <div key={role.key} className="space-y-2 rounded-lg border bg-background p-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-semibold uppercase tracking-wide">{role.label}</Label>
-                      <span className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
-                        {role.key}
-                      </span>
-                    </div>
-                    <Select
-                      value={pins[role.key] ?? ""}
-                      onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
+            {/* 01. Sensor type */}
+            <section className="space-y-4">
+              <h2
+                className="text-xs font-bold uppercase tracking-[0.18em] text-[#7A8794]"
+                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+              >
+                01. Sensor type
+              </h2>
+              <RadioGroup
+                value={kind}
+                onValueChange={(v) => setKind(v as SensorKind)}
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+              >
+                {kinds.map((k) => {
+                  const m = KIND_META[k];
+                  const Icon = m.icon;
+                  const selected = kind === k;
+                  return (
+                    <label
+                      key={k}
+                      htmlFor={`kind-${k}`}
+                      className={`group relative flex cursor-pointer flex-col gap-2 rounded-lg border p-4 transition-all ${
+                        selected
+                          ? "border-[#22D3EE] bg-[#22D3EE]/5 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]"
+                          : "border-white/10 bg-[#1A222B] hover:border-white/25"
+                      }`}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder={available.length === 0 ? "No free pins for this role" : "Select a compatible GPIO"} />
+                      <RadioGroupItem id={`kind-${k}`} value={k} className="sr-only" />
+                      <Icon
+                        className={`h-5 w-5 transition-colors ${
+                          selected ? "text-[#22D3EE]" : "text-[#7A8794] group-hover:text-[#E5EDF5]"
+                        }`}
+                      />
+                      <div>
+                        <p className="text-sm font-medium leading-tight">{m.label}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-[#7A8794]">{m.description}</p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </RadioGroup>
+            </section>
+
+            {/* 02. Hardware config */}
+            <section className="space-y-5">
+              <h2
+                className="text-xs font-bold uppercase tracking-[0.18em] text-[#7A8794]"
+                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+              >
+                02. Hardware config
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[#7A8794]">
+                    Target device
+                  </label>
+                  {devicesQ.isLoading ? (
+                    <p className="text-sm text-[#7A8794]">Loading…</p>
+                  ) : (devicesQ.data ?? []).length === 0 ? (
+                    <p className="text-sm">
+                      No devices yet.{" "}
+                      <Link to="/devices" className="text-[#22D3EE] underline underline-offset-4">
+                        Create one first
+                      </Link>
+                      .
+                    </p>
+                  ) : (
+                    <Select value={deviceId} onValueChange={setDeviceId}>
+                      <SelectTrigger className="border-white/10 bg-[#1A222B] text-[#E5EDF5] hover:border-white/25 focus:border-[#22D3EE] focus:ring-[#22D3EE]/30">
+                        <SelectValue placeholder="Select device" />
                       </SelectTrigger>
                       <SelectContent>
-                        {available.length === 0 ? (
-                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                            All compatible pins are in use. Free one by deleting a sensor.
-                          </div>
-                        ) : (
-                          available.map((o) => (
-                            <SelectItem key={o.pin} value={o.pin}>{o.label}</SelectItem>
-                          ))
-                        )}
+                        {(devicesQ.data ?? []).map((d) => (
+                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">{role.hint}</p>
-                    {selectedOwner && (
-                      <p className="text-xs text-amber-600">
-                        GPIO {selectedPin} is already used by "{selectedOwner}". Pick a different pin or delete that sensor.
-                      </p>
-                    )}
-                    {errors[`pin.${role.key}`] && <p className="text-xs text-destructive">{errors[`pin.${role.key}`]}</p>}
+                  )}
+                  {errors.device_id && <p className="text-xs text-red-400">{errors.device_id}</p>}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[#7A8794]">
+                    Sensor label
+                  </label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={meta.label}
+                    maxLength={60}
+                    className="border-white/10 bg-[#1A222B] text-[#E5EDF5] placeholder:text-white/25 focus-visible:border-[#22D3EE] focus-visible:ring-[#22D3EE]/30"
+                  />
+                  {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
+                </div>
+              </div>
+
+              {/* Pin assignment panel */}
+              <div className="space-y-4 rounded-lg border border-white/5 bg-[#1A222B] p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Pin assignment</span>
+                  <span
+                    className="rounded border border-[#22D3EE]/25 bg-[#22D3EE]/10 px-2 py-0.5 text-[10px] font-medium tracking-wider text-[#22D3EE]"
+                    style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                  >
+                    {meta.label.toUpperCase()}
+                  </span>
+                </div>
+
+                {pinOwners.size > 0 && (
+                  <div className="rounded-md border border-dashed border-white/10 bg-black/20 p-3">
+                    <p
+                      className="text-[10px] font-medium uppercase tracking-wider text-[#7A8794]"
+                      style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                    >
+                      Already wired on this device
+                    </p>
+                    <ul
+                      className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#7A8794]"
+                      style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                    >
+                      {Array.from(pinOwners.entries())
+                        .sort((a, b) => Number(a[0]) - Number(b[0]))
+                        .map(([pin, owner]) => (
+                          <li key={pin}>
+                            <span className="text-[#22D3EE]">GPIO {pin}</span>
+                            <span className="mx-1 text-white/30">—</span>
+                            <span className="text-[#E5EDF5]">{owner}</span>
+                          </li>
+                        ))}
+                    </ul>
                   </div>
-                );
-              })}
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {roles.map((role) => {
+                    const otherRoleTaken = takenByOtherRole(role.key);
+                    const available = role.options.filter(
+                      (o) => !usedPins.has(o.pin) && !otherRoleTaken.has(o.pin),
+                    );
+                    const selectedPin = pins[role.key];
+                    const selectedOwner = selectedPin ? pinOwners.get(selectedPin) : undefined;
+                    const conflict = Boolean(selectedOwner) || Boolean(errors[`pin.${role.key}`]);
+                    return (
+                      <div key={role.key} className="space-y-2">
+                        <label
+                          className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-[#7A8794]"
+                          style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                        >
+                          <span>{role.label}</span>
+                          <span className="text-[#22D3EE]/70">{role.key}</span>
+                        </label>
+                        <Select
+                          value={pins[role.key] ?? ""}
+                          onValueChange={(v) => setPins((p) => ({ ...p, [role.key]: v }))}
+                        >
+                          <SelectTrigger
+                            className={`bg-[#0F1216] text-[#E5EDF5] focus:ring-[#22D3EE]/30 ${
+                              conflict
+                                ? "border-amber-500/60 focus:border-amber-500"
+                                : "border-white/10 hover:border-white/25 focus:border-[#22D3EE]"
+                            }`}
+                            style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                          >
+                            <SelectValue
+                              placeholder={
+                                available.length === 0 ? "No free pins" : "Select GPIO"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {available.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                All compatible pins are in use.
+                              </div>
+                            ) : (
+                              available.map((o) => (
+                                <SelectItem key={o.pin} value={o.pin}>
+                                  {o.label}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[11px] leading-snug text-[#7A8794]">{role.hint}</p>
+                        {selectedOwner && (
+                          <p
+                            className="text-[10px] font-medium text-amber-400"
+                            style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                          >
+                            ! GPIO {selectedPin} in use by {selectedOwner}
+                          </p>
+                        )}
+                        {errors[`pin.${role.key}`] && (
+                          <p className="text-[11px] text-red-400">{errors[`pin.${role.key}`]}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* 03. Display */}
+            <section className="space-y-4 pb-4">
+              <h2
+                className="text-xs font-bold uppercase tracking-[0.18em] text-[#7A8794]"
+                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+              >
+                03. Display
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[#7A8794]">
+                    Display as
+                  </label>
+                  <Select value={view} onValueChange={(v) => setView(v as SensorView)}>
+                    <SelectTrigger className="border-white/10 bg-[#1A222B] text-[#E5EDF5] hover:border-white/25 focus:border-[#22D3EE] focus:ring-[#22D3EE]/30">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {meta.allowedViews.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {v === "graph" ? "Graph" : v === "numeric" ? "Numeric" : "Button (output)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[#7A8794]">
+                    Unit label (optional)
+                  </label>
+                  <Input
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    placeholder={meta.unit ?? "e.g. W"}
+                    maxLength={16}
+                    className="border-white/10 bg-[#1A222B] text-[#E5EDF5] placeholder:text-white/25 focus-visible:border-[#22D3EE] focus-visible:ring-[#22D3EE]/30"
+                    style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <div className="flex items-center gap-3 border-t border-white/5 pt-6">
+              <button
+                onClick={() => save.mutate()}
+                disabled={save.isPending || (devicesQ.data ?? []).length === 0}
+                className="rounded-md bg-[#22D3EE] px-6 py-2.5 text-sm font-semibold text-[#0F1216] shadow-[0_0_24px_rgba(34,211,238,0.25)] transition-transform hover:bg-[#5EE0F1] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+              >
+                {save.isPending ? "Saving…" : "Save sensor"}
+              </button>
+              <button
+                onClick={() => navigate({ to: "/dashboard" })}
+                className="rounded-md px-6 py-2.5 text-sm font-medium text-[#7A8794] transition-colors hover:text-[#E5EDF5]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          {/* Right: docked live preview */}
+          <div className="lg:sticky lg:top-12 lg:col-span-5">
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1A222B] shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7A8794]"
+                  style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                >
+                  Live tile preview
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      isMocked ? "bg-[#7A8794]" : "bg-[#22D3EE] animate-pulse"
+                    }`}
+                  />
+                  <span
+                    className={`text-[10px] font-medium tracking-widest ${
+                      isMocked ? "text-[#7A8794]" : "text-[#22D3EE]"
+                    }`}
+                    style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                  >
+                    {isMocked ? "SIMULATED" : "STREAMING"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center bg-gradient-to-b from-transparent to-[#22D3EE]/5 p-8">
+                <div className="w-[240px]">
+                  <TilePreview
+                    name={name.trim() || meta.label}
+                    pin={primaryPin}
+                    kindLabel={meta.label}
+                    Icon={meta.icon}
+                    view={view}
+                    unit={unit.trim()}
+                    readings={previewReadings}
+                    isMocked={isMocked}
+                  />
+                </div>
+              </div>
+
+              <div
+                className="flex items-center justify-between border-t border-white/5 bg-black/20 px-4 py-2.5 text-[10px] text-[#7A8794]"
+                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+              >
+                <span>KIND: {kind.toUpperCase()}</span>
+                <span>PIN: {primaryPin ? `GPIO ${primaryPin}` : "—"}</span>
+              </div>
             </div>
 
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Display as</Label>
-                <Select value={view} onValueChange={(v) => setView(v as SensorView)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {meta.allowedViews.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {v === "graph" ? "Graph" : v === "numeric" ? "Numeric" : "Button (output)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Unit (optional)</Label>
-                <Input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={meta.unit ?? "e.g. W"} maxLength={16} />
-              </div>
+            <div className="mt-5 rounded-lg border border-[#22D3EE]/20 bg-[#22D3EE]/5 p-4">
+              <p className="text-[11px] leading-relaxed text-[#22D3EE]/80">
+                <span className="font-bold">Tip:</span>{" "}
+                {previewQ.isFetching
+                  ? "Checking for existing readings on this pin…"
+                  : isMocked
+                    ? "Preview shows simulated values. Real readings appear as soon as your device posts data."
+                    : "Preview is streaming live readings from a previous sensor on this pin."}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>3. Preview</CardTitle>
-            <CardDescription>How this sensor will appear on your dashboard.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-center">
-              <div className="w-[220px]">
-                <TilePreview
-                  name={name.trim() || meta.label}
-                  pin={primaryPin}
-                  kindLabel={meta.label}
-                  Icon={meta.icon}
-                  view={view}
-                  unit={unit.trim()}
-                  readings={previewReadings}
-                  isMocked={isMocked}
-                />
-              </div>
-            </div>
-            <p className="mt-2 text-center text-xs text-muted-foreground">
-              {previewQ.isFetching
-                ? "Checking for existing readings on this pin…"
-                : isMocked
-                  ? "Showing simulated values — real readings will replace them after your device posts data."
-                  : "Live readings from a previous sensor on this pin."}
-            </p>
-
-          </CardContent>
-        </Card>
-
-
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => navigate({ to: "/dashboard" })}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || (devicesQ.data ?? []).length === 0}>
-            {save.isPending ? "Saving…" : "Save sensor"}
-          </Button>
+          </div>
         </div>
       </main>
     </div>
