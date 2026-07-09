@@ -483,13 +483,6 @@ export function SensorHistoryDialog({
             <div className="flex h-full items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading history…
             </div>
-          ) : bucketed.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-1 text-center text-sm text-muted-foreground">
-              <p>No readings recorded in this range yet.</p>
-              <p className="text-xs">
-                Try a longer range — the sensor may not have been reporting during this window.
-              </p>
-            </div>
           ) : (
             <div className="h-full w-full transition-opacity duration-300"
                  style={{ opacity: isFetching ? 0.75 : 1 }}>
