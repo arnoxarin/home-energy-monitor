@@ -169,20 +169,56 @@ export function WifiConfigCard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={save} size="sm">
-            <Save className="mr-1 h-4 w-4" /> Save WiFi
+          <Button
+            onClick={sendAndApply}
+            size="sm"
+            disabled={status === "loading"}
+            className={
+              status === "success"
+                ? "bg-emerald-600 text-white hover:bg-emerald-600"
+                : status === "error"
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive"
+                  : ""
+            }
+          >
+            {status === "loading" ? (
+              <>
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" /> Sending…
+              </>
+            ) : status === "success" ? (
+              <>
+                <CheckCircle2 className="mr-1 h-4 w-4" /> Applied
+              </>
+            ) : status === "error" ? (
+              <>
+                <AlertCircle className="mr-1 h-4 w-4" /> Failed — retry
+              </>
+            ) : (
+              <>
+                <Send className="mr-1 h-4 w-4" /> Send &amp; Apply
+              </>
+            )}
           </Button>
-          {saved && (
+          {saved && status !== "loading" && (
             <Button onClick={clear} size="sm" variant="outline">
               Clear
             </Button>
           )}
-          {saved && (
+          {status === "success" && (
+            <span className="text-xs text-emerald-600 animate-fade-in">
+              WiFi saved &amp; baked into the next firmware build.
+            </span>
+          )}
+          {status === "error" && errorMsg && (
+            <span className="text-xs text-destructive animate-fade-in">{errorMsg}</span>
+          )}
+          {status === "idle" && saved && (
             <span className="text-xs text-muted-foreground">
               Saved · used automatically in Firmware downloads.
             </span>
           )}
         </div>
+
       </CardContent>
     </Card>
   );
