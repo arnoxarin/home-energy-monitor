@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Cpu, Copy, Download, Zap, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Cpu, Copy, Download, Zap, AlertCircle, CheckCircle2, Settings } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 // Vite bundles the .ino file as a raw string, so the firmware source
 // is always in sync with what's in the repo.
@@ -137,6 +138,16 @@ export function FirmwareDialog() {
             type. Onboard LED: fast blink = portal open, slow blink = connecting, solid = online.
           </DialogDescription>
         </DialogHeader>
+        <Link
+          to="/setup"
+          onClick={() => setOpen(false)}
+          className="absolute right-12 top-4"
+        >
+          <Button variant="outline" size="sm" className="h-8">
+            <Settings className="mr-1 h-3.5 w-3.5" /> Setup
+          </Button>
+        </Link>
+
 
         <FirmwareBuildStatus />
 
