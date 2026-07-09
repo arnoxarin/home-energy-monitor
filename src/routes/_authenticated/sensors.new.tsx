@@ -509,7 +509,7 @@ function NewSensorPage() {
           </div>
 
           {/* Right: docked live preview */}
-          <div className="lg:sticky lg:top-12 lg:col-span-5">
+          <div className="md:sticky md:top-12 md:col-span-5">
             <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1A222B] shadow-2xl">
               <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
                 <span
