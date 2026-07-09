@@ -28,9 +28,9 @@ function commitTheme(t: Theme, origin: Origin) {
   root.style.setProperty("--tt-x", `${x}px`);
   root.style.setProperty("--tt-y", `${y}px`);
 
-  // @ts-expect-error - View Transitions API is not in all TS libs yet
-  const startViewTransition: undefined | ((cb: () => void) => unknown) =
-    document.startViewTransition?.bind(document);
+  const startViewTransition: undefined | ((cb: () => void) => unknown) = (
+    document as unknown as { startViewTransition?: (cb: () => void) => unknown }
+  ).startViewTransition?.bind(document);
 
   const prefersReduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
