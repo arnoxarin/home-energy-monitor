@@ -241,18 +241,21 @@ bool claimWithCode(const String& code) {
   serializeJson(body, out);
 
   HTTPClient http;
+  Serial.printf("[claim] POST %s\n", cfgClaimUrl.c_str());
+  Serial.printf("[claim] body: %s\n", out.c_str());
   http.begin(cfgClaimUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // follow http->https / canonical host
   http.addHeader("Content-Type", "application/json");
   int status = http.POST(out);
-  Serial.printf("[claim] status %d\n", status);
-  if (status != 200) { http.end(); return false; }
-
   String resp = http.getString();
+  Serial.printf("[claim] status %d, %d bytes\n", status, resp.length());
+  Serial.printf("[claim] resp: %s\n", resp.c_str());
+  if (status != 200) { http.end(); return false; }
   http.end();
 
   DynamicJsonDocument doc(1024);
-  if (deserializeJson(doc, resp)) { Serial.println("[claim] bad JSON"); return false; }
+  DeserializationError jerr = deserializeJson(doc, resp);
+  if (jerr) { Serial.printf("[claim] bad JSON: %s\n", jerr.c_str()); return false; }
   const char* url = doc["ingest_url"] | "";
   const char* key = doc["ingest_key"] | "";
   if (!*url || !*key) return false;
