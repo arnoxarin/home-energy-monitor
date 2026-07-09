@@ -286,6 +286,7 @@ bool claimWithCode(const String& code) {
 
   HTTPClient http;
   http.begin(cfgClaimUrl);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   int status = http.POST(out);
   Serial.printf("[claim] status %d\n", status);
