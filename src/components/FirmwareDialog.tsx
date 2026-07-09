@@ -136,24 +136,24 @@ export function FirmwareDialog() {
           <Cpu className="mr-1 h-4 w-4" /> Firmware
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Install ESP32 firmware</DialogTitle>
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader className="pr-8">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+            <DialogTitle className="truncate">Install ESP32 firmware</DialogTitle>
+            <Link to="/setup" onClick={() => setOpen(false)} className="shrink-0">
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
+                <Settings className="mr-1 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Setup</span>
+              </Button>
+            </Link>
+          </div>
           <DialogDescription>
             The ingest URL and device key are baked into the firmware for the device you
             pick below, so the ESP32's setup portal only asks for WiFi — no URL or key to
             type. Onboard LED: fast blink = portal open, slow blink = connecting, solid = online.
           </DialogDescription>
         </DialogHeader>
-        <Link
-          to="/setup"
-          onClick={() => setOpen(false)}
-          className="absolute right-12 top-4"
-        >
-          <Button variant="outline" size="sm" className="h-8">
-            <Settings className="mr-1 h-3.5 w-3.5" /> Setup
-          </Button>
-        </Link>
+
 
 
         <FirmwareBuildStatus />
