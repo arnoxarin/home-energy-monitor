@@ -326,13 +326,27 @@ void refreshConfig() {
   }
   http.end();
 
-  DynamicJsonDocument doc(4096);
+  // Detect the classic "SPA HTML instead of JSON" case: host is not routing
+  // /api/public/config to the server endpoint (wrong host / preview wrapper).
+  String head = body.substring(0, 32);
+  head.trim();
+  head.toLowerCase();
+  if (head.startsWith("<!doctype") || head.startsWith("<html")) {
+    Serial.println("[config] server returned HTML, not JSON.");
+    Serial.println("[config] your ingest URL host isn't serving the API route.");
+    Serial.println("[config] use https://project--<project-id>.lovable.app/api/public/config");
+    Serial.println("[config] (or the -dev.lovable.app variant for preview).");
+    return;
+  }
+
+  DynamicJsonDocument doc(8192);
   DeserializationError err = deserializeJson(doc, body);
   if (err) {
     Serial.printf("[config] parse err: %s\n", err.c_str());
-    Serial.printf("[config] raw: %s\n", body.c_str());
+    Serial.printf("[config] first 300 chars: %s\n", body.substring(0, 300).c_str());
     return;
   }
+
 
   tearDownSensors();
   JsonArray arr = doc["sensors"].as<JsonArray>();
