@@ -179,26 +179,39 @@
   }
 
   html {
-    transition: background-color 400ms ease, color 400ms ease;
+    /* No color/background transition here — the View Transitions API handles
+       the crossfade via a clipped snapshot. A CSS transition on top would
+       interpolate text/bg color under the reveal and cause flicker. */
   }
 
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    transition: background-color 400ms ease, color 400ms ease;
   }
 
-  /* Smoothly cross-fade themeable surfaces */
+  /* Kept as a no-op hook: previous rule animated color on every descendant
+     which double-animated inside the view transition snapshot and caused
+     the flicker the user reported. */
   .theme-transition,
   .theme-transition * {
-    transition:
-      background-color 400ms ease,
-      border-color 400ms ease,
-      color 300ms ease,
-      fill 300ms ease,
-      stroke 300ms ease,
-      box-shadow 400ms ease !important;
+    transition: none;
   }
+}
+
+/* Belt-and-suspenders: while the browser is running a view transition,
+   suppress any color/background transitions so the snapshot stays crisp. */
+html:has(::view-transition),
+html:has(::view-transition) * {
+  transition: none !important;
+  animation-duration: 0s;
+}
+/* But keep the reveal animation itself running. */
+::view-transition-group(root),
+::view-transition-image-pair(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 500ms;
+}
 }
 
 /* View Transitions API: circular reveal from toggle origin */
