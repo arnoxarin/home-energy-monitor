@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Activity, ArrowLeft, Copy, Eye, EyeOff, KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
+import { Activity, ArrowLeft, Copy, Eye, EyeOff, KeyRound, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/devices")({
@@ -207,6 +207,9 @@ function DeviceRow({ device, origin }: { device: Device; origin: string }) {
           )}
         </div>
         <div className="flex gap-1">
+          <Link to="/devices/$deviceId/register" params={{ deviceId: device.id }}>
+            <Button variant="outline" size="sm"><Link2 className="mr-1 h-3.5 w-3.5" /> Register</Button>
+          </Link>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" size="sm"><KeyRound className="mr-1 h-3.5 w-3.5" /> Revoke key</Button>
