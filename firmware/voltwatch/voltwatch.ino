@@ -383,7 +383,39 @@ bool refreshConfig() {
     sensorCount++;
   }
   Serial.printf("[config] %d sensor(s) loaded\n", sensorCount);
+  return true;
 }
+
+// Retry refreshConfig() with exponential backoff. Delays double each attempt
+// starting at 1s, capped at 30s (1, 2, 4, 8, 16, 30, 30, ...). Non-blocking
+// updates to the status LED continue via updateLed() during the wait.
+bool refreshConfigWithBackoff(int maxAttempts, const char* reason) {
+  Serial.printf("[config] retry loop start (%s), up to %d attempts\n", reason, maxAttempts);
+  unsigned long delayMs = 1000;
+  for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+    Serial.printf("[config] attempt %d/%d\n", attempt, maxAttempts);
+    if (refreshConfig()) {
+      Serial.printf("[config] recovered on attempt %d\n", attempt);
+      setLed(LED_ONLINE);
+      return true;
+    }
+    if (attempt == maxAttempts) break;
+    Serial.printf("[config] retry in %lu ms\n", delayMs);
+    setLed(LED_ERROR);
+    unsigned long start = millis();
+    while (millis() - start < delayMs) {
+      updateLed();
+      delay(20);
+    }
+    delayMs = min<unsigned long>(delayMs * 2, 30000);
+  }
+  Serial.println("[config] FINAL FAILURE: could not load config after retries.");
+  Serial.println("[config] check: WiFi, ingest URL host, ingest key, and that the device is paired.");
+  Serial.println("[config] the ESP will keep retrying on its normal 15s schedule.");
+  setLed(LED_ERROR);
+  return false;
+}
+
 
 // ---------- Reading loop ----------
 long readUltrasonicCm(int trig, int echo) {
