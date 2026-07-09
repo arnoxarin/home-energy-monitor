@@ -32,8 +32,6 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <DHT.h>
-#include "voltwatch.h"  // struct Sensor lives here so Arduino's auto-generated
-                        // function prototypes at the top of the .ino can see it
 
 // ---------- Firmware identity ----------
 // Bump FW_VERSION whenever behavior changes (LED logic, protocol, sensors).
@@ -103,7 +101,21 @@ void updateLed() {
 }
 
 // ---------- Dynamic sensor table ----------
-// struct Sensor is defined in voltwatch.h (see include above).
+// NOTE: keep the Sensor struct + any function that takes a Sensor& in this
+// single-file .ino OUT of function signatures. The Arduino preprocessor
+// auto-inserts function prototypes at the top of the file (above every
+// declaration), so a `void applySensor(Sensor&)` signature would generate
+// a prototype that references `Sensor` before the struct is declared and
+// the build fails. Using an index (`int i`) keeps the auto-prototype valid
+// with no header file required.
+struct Sensor {
+  String id;
+  String kind;   // "dht22" | "relay" | "analog" | "digital" | "ultrasonic" | ...
+  int    pin;    // primary pin (data / signal / out)
+  int    pinB;   // secondary pin (e.g. ultrasonic ECHO), -1 if unused
+  bool   desiredOn; // for relays
+  DHT*   dht;    // lazily allocated for DHT22
+};
 Sensor sensors[MAX_SENSORS];
 int sensorCount = 0;
 
@@ -123,7 +135,9 @@ void tearDownSensors() {
   sensorCount = 0;
 }
 
-void applySensor(Sensor& s) {
+// Takes an index into `sensors[]` (not a Sensor&) on purpose — see note above.
+void applySensor(int i) {
+  Sensor& s = sensors[i];
   if (s.kind == "dht22" && s.pin >= 0) {
     s.dht = new DHT(s.pin, DHT22);
     s.dht->begin();
@@ -227,7 +241,7 @@ void refreshConfig() {
       if (*p) out.pin = parsePin(p);
     }
 
-    applySensor(out);
+    applySensor(sensorCount);
     sensorCount++;
   }
   Serial.printf("[config] %d sensor(s) loaded\n", sensorCount);
