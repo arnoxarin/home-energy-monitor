@@ -164,7 +164,18 @@ function EditSensorPage() {
       setErrors({});
 
       const primaryPin = pins[roles[0].key]!;
-      const nextState = { ...(sensor.state ?? {}), pins } as Record<string, string | boolean | Record<string, string>>;
+      const parsedMin = alertMin.trim() === "" ? null : Number(alertMin);
+      const parsedMax = alertMax.trim() === "" ? null : Number(alertMax);
+      if (parsedMin != null && Number.isNaN(parsedMin)) { setErrors({ alertMin: "Must be a number" }); throw new Error("Fix alert min"); }
+      if (parsedMax != null && Number.isNaN(parsedMax)) { setErrors({ alertMax: "Must be a number" }); throw new Error("Fix alert max"); }
+      if (parsedMin != null && parsedMax != null && parsedMin > parsedMax) {
+        setErrors({ alertMax: "Max must be ≥ min" }); throw new Error("Fix alert range");
+      }
+      const alerts =
+        parsedMin == null && parsedMax == null && !alertField.trim()
+          ? undefined
+          : { field: alertField.trim() || null, min: parsedMin, max: parsedMax };
+      const nextState = { ...(sensor.state ?? {}), pins, alerts };
       const { error } = await supabase
         .from("sensors")
         .update({
