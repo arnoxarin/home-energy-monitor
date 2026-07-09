@@ -65,6 +65,30 @@ String cfgIngest;     // .../api/public/ingest
 String cfgKey;        // device ingest key
 String cfgConfigUrl;  // derived: .../api/public/config
 String cfgClaimUrl;   // .../api/public/claim  (pairing endpoint)
+String cfgHostname;   // WiFi hostname (shown in router device list)
+
+// Build a sensible default hostname like "voltwatch-a1b2" from the MAC.
+String defaultHostname() {
+  uint64_t mac = ESP.getEfuseMac();
+  char buf[24];
+  snprintf(buf, sizeof(buf), "voltwatch-%04x", (uint16_t)(mac & 0xFFFF));
+  return String(buf);
+}
+
+// Sanitise a user-typed hostname to RFC-952/1123-safe chars.
+String sanitiseHostname(const String& in) {
+  String out;
+  for (size_t i = 0; i < in.length() && out.length() < 31; i++) {
+    char c = in[i];
+    if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
+    if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') out += c;
+    else if (c == ' ' || c == '_' || c == '.') out += '-';
+  }
+  while (out.length() && out[0] == '-') out.remove(0, 1);
+  while (out.length() && out[out.length() - 1] == '-') out.remove(out.length() - 1);
+  if (out.length() == 0) out = defaultHostname();
+  return out;
+}
 
 
 const char* AP_NAME = "Voltwatch-Setup";
@@ -199,10 +223,14 @@ void startConfigPortal(bool onDemand) {
   // firmware knows how to reach a claim endpoint — either baked in, or
   // once the user has typed an ingest URL (from which we derive it).
   WiFiManagerParameter pCode("paircode", "Pairing code (6 digits, optional)", "", 8);
+  // Hostname the router will display for this ESP in its device list.
+  WiFiManagerParameter pHost("hostname", "Device name (shown in your router)",
+                             cfgHostname.c_str(), 32);
   bool offerCode = haveClaim || needEndpoint; // if no ingest baked in, user can pair after entering URL
   if (needEndpoint) wm.addParameter(&pEndpoint);
   if (needKey)      wm.addParameter(&pKey);
   if (offerCode)    wm.addParameter(&pCode);
+  wm.addParameter(&pHost);
   wm.setConfigPortalTimeout(300);
 
   // Blink LED fast while the portal is up so the user knows to connect
@@ -210,6 +238,8 @@ void startConfigPortal(bool onDemand) {
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
   wm.setSaveConfigCallback([]() { setLed(LED_CONNECTING); });
 
+  // Apply the hostname BEFORE WiFi connects so the router sees the right name.
+  WiFi.setHostname(cfgHostname.c_str());
 
   bool ok = onDemand ? wm.startConfigPortal(AP_NAME, AP_PASS)
                      : wm.autoConnect(AP_NAME, AP_PASS);
@@ -217,11 +247,17 @@ void startConfigPortal(bool onDemand) {
 
   if (needEndpoint) cfgIngest = pEndpoint.getValue();
   if (needKey)      cfgKey    = pKey.getValue();
+  String newHost = sanitiseHostname(String(pHost.getValue()));
+  if (newHost != cfgHostname) {
+    cfgHostname = newHost;
+    WiFi.setHostname(cfgHostname.c_str());
+  }
   prefs.begin("voltwatch", false);
-  prefs.putString("ingest", cfgIngest);
-  prefs.putString("key",    cfgKey);
+  prefs.putString("ingest",   cfgIngest);
+  prefs.putString("key",      cfgKey);
+  prefs.putString("hostname", cfgHostname);
   prefs.end();
-  Serial.println("[cfg] saved");
+  Serial.printf("[cfg] saved (hostname=%s)\n", cfgHostname.c_str());
 
   // If a pairing code was entered (and we still lack an ingest key), redeem
   // it now that WiFi is up. On success this also persists ingest URL/key.
@@ -241,9 +277,12 @@ void startConfigPortal(bool onDemand) {
 
 void loadConfig() {
   prefs.begin("voltwatch", true);
-  cfgIngest = prefs.getString("ingest", "");
-  cfgKey    = prefs.getString("key", "");
+  cfgIngest   = prefs.getString("ingest", "");
+  cfgKey      = prefs.getString("key", "");
+  cfgHostname = prefs.getString("hostname", "");
   prefs.end();
+  if (cfgHostname.length() == 0) cfgHostname = defaultHostname();
+  cfgHostname = sanitiseHostname(cfgHostname);
 
   // Fall back to compile-time defaults when nothing is saved yet or when
   // the .ino was personalized for a specific device by the dashboard.
@@ -454,6 +493,12 @@ void setup() {
   setLed(LED_CONNECTING);
 
   loadConfig();
+
+  // Hostname must be set before WiFi enters STA mode so the DHCP client
+  // announces it to the router.
+  WiFi.mode(WIFI_STA);
+  WiFi.setHostname(cfgHostname.c_str());
+  Serial.printf("[cfg] hostname=%s\n", cfgHostname.c_str());
 
   if (digitalRead(PORTAL_BUTTON_PIN) == LOW) {
     Serial.println("[cfg] BOOT held — opening portal");
