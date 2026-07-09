@@ -186,12 +186,10 @@ export function SensorHistoryDialog({
           )}
         </div>
 
-        {/* Stat strip */}
+        {/* Stat strip — values transition individually, container never remounts */}
         {stats && (
-          <div
-            key={`stats-${range}-${activeField}`}
-            className="grid grid-cols-2 gap-2 animate-fade-in sm:grid-cols-4"
-          >
+          <div className="grid grid-cols-2 gap-2 transition-opacity duration-300 sm:grid-cols-4"
+               style={{ opacity: isFetching ? 0.6 : 1 }}>
             <StatCell label="Latest" value={fmt(stats.last)} />
             <StatCell label="Average" value={fmt(stats.avg)} />
             <StatCell label="Min" value={fmt(stats.min)} />
@@ -209,12 +207,11 @@ export function SensorHistoryDialog({
           </div>
         )}
 
-        {/* Chart */}
-        <div
-          key={`chart-${range}-${activeField}`}
-          className="h-[340px] w-full animate-fade-in rounded-lg border bg-card p-3"
-        >
-          {isLoading ? (
+        {/* Chart — stays mounted across range/field switches; recharts
+            interpolates between data sets. A small loading dot shows in the
+            corner while the new range is fetching. */}
+        <div className="relative h-[340px] w-full rounded-lg border bg-card p-3">
+          {isLoading && bucketed.length === 0 ? (
             <div className="flex h-full items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading history…
             </div>
@@ -226,42 +223,51 @@ export function SensorHistoryDialog({
               </p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={bucketed} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="histFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="color-mix(in oklab, currentColor 12%, transparent)"
-                />
-                <XAxis dataKey="t" tick={{ fontSize: 11 }} minTickGap={24} />
-                <YAxis tick={{ fontSize: 11 }} width={40} />
-                <Tooltip
-                  contentStyle={{
-                    fontSize: 12,
-                    borderRadius: 8,
-                    backdropFilter: "blur(8px)",
-                    background: "color-mix(in oklab, var(--color-card) 85%, transparent)",
-                  }}
-                  formatter={(value: number) => [fmt(value), activeField]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="avg"
-                  stroke="var(--color-primary)"
-                  strokeWidth={2}
-                  fill="url(#histFill)"
-                  animationDuration={600}
-                  animationEasing="ease-out"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="h-full w-full transition-opacity duration-300"
+                 style={{ opacity: isFetching ? 0.75 : 1 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={bucketed} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="histFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="color-mix(in oklab, currentColor 12%, transparent)"
+                  />
+                  <XAxis dataKey="t" tick={{ fontSize: 11 }} minTickGap={24} />
+                  <YAxis tick={{ fontSize: 11 }} width={40} />
+                  <Tooltip
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 8,
+                      backdropFilter: "blur(8px)",
+                      background: "color-mix(in oklab, var(--color-card) 85%, transparent)",
+                    }}
+                    formatter={(value: number) => [fmt(value), activeField]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="avg"
+                    stroke="var(--color-primary)"
+                    strokeWidth={2}
+                    fill="url(#histFill)"
+                    animationDuration={550}
+                    animationEasing="ease-in-out"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {isFetching && bucketed.length > 0 && (
+            <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full border bg-background/80 px-2 py-1 text-[10px] text-muted-foreground shadow-sm backdrop-blur">
+              <Loader2 className="h-3 w-3 animate-spin" /> updating
+            </div>
           )}
         </div>
+
       </DialogContent>
     </Dialog>
   );
