@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,7 +8,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Cpu, Copy, Download, Zap, AlertCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Cpu, Copy, Download, Zap, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 // Vite bundles the .ino file as a raw string, so the firmware source
 // is always in sync with what's in the repo.
@@ -16,6 +23,8 @@ import firmwareSource from "../../firmware/voltwatch/voltwatch.ino?raw";
 // Registers the <esp-web-install-button> custom element in the browser.
 import "esp-web-tools";
 import { FirmwareBuildStatus } from "./FirmwareBuildStatus";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 // Let TypeScript know about the custom element from esp-web-tools (React 19)
 declare module "react" {
@@ -31,11 +40,47 @@ declare module "react" {
 
 const MANIFEST_URL = "/firmware/manifest.json";
 
+type DeviceRow = { id: string; name: string; ingest_key: string };
+
 export function FirmwareDialog() {
   const [open, setOpen] = useState(false);
   const [binReady, setBinReady] = useState<boolean | null>(null);
+  const [deviceId, setDeviceId] = useState<string>("");
   const webSerialSupported =
     typeof navigator !== "undefined" && "serial" in navigator;
+
+  // Load the user's devices so we can bake ingest URL + key into the .ino
+  const { data: devices = [] } = useQuery<DeviceRow[]>({
+    queryKey: ["devices-for-firmware"],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("devices")
+        .select("id, name, ingest_key")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  useEffect(() => {
+    if (!deviceId && devices.length > 0) setDeviceId(devices[0].id);
+  }, [devices, deviceId]);
+
+  const selected = devices.find((d) => d.id === deviceId);
+
+  // Substitute the __INGEST_URL__ / __INGEST_KEY__ placeholders in the .ino
+  // with this app's origin and the selected device's ingest key, so the
+  // ESP32 doesn't have to be told either at the captive portal.
+  const personalizedSource = useMemo(() => {
+    if (typeof window === "undefined") return firmwareSource;
+    const origin = window.location.origin;
+    const ingestUrl = `${origin}/api/public/ingest`;
+    const key = selected?.ingest_key ?? "";
+    return firmwareSource
+      .replaceAll("__INGEST_URL__", ingestUrl)
+      .replaceAll("__INGEST_KEY__", key);
+  }, [selected]);
 
   // Check whether the compiled .bin is actually deployed
   useEffect(() => {
@@ -55,12 +100,16 @@ export function FirmwareDialog() {
   }, [open]);
 
   const copy = () => {
-    navigator.clipboard.writeText(firmwareSource);
-    toast.success("Firmware copied to clipboard");
+    navigator.clipboard.writeText(personalizedSource);
+    toast.success(
+      selected
+        ? `Firmware copied — pre-configured for "${selected.name}"`
+        : "Firmware copied to clipboard",
+    );
   };
 
   const download = () => {
-    const blob = new Blob([firmwareSource], { type: "text/plain" });
+    const blob = new Blob([personalizedSource], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -70,6 +119,7 @@ export function FirmwareDialog() {
     a.remove();
     URL.revokeObjectURL(url);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
