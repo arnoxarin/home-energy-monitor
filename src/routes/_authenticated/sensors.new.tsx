@@ -236,9 +236,10 @@ function NewSensorPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-10 md:px-12 md:py-12">
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-12">
           {/* Left: configuration form */}
-          <div className="space-y-10 lg:col-span-7">
+          <div className="space-y-10 md:col-span-7">
+
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Add new sensor</h1>
               <p className="mt-1 text-sm text-[#7A8794]">
