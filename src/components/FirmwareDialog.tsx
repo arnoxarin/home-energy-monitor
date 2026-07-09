@@ -149,16 +149,16 @@ export function FirmwareDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent
-        className="w-[calc(100vw-1.5rem)] max-w-4xl max-h-[92vh] overflow-hidden p-0 gap-0 border-[#e8ecf1] bg-white"
+        className="w-[calc(100vw-1.5rem)] max-w-4xl max-h-[92vh] overflow-hidden p-0 gap-0 border-border bg-card"
         style={{ fontFamily: BODY_FONT }}
       >
         <DialogTitle className="sr-only">Install ESP32 firmware</DialogTitle>
 
         <div className="flex flex-col sm:flex-row max-h-[92vh]">
           {/* ---------- Sidebar ---------- */}
-          <aside className="sm:w-60 shrink-0 bg-[#fafbfc] border-b sm:border-b-0 sm:border-r border-[#e8ecf1] p-5 sm:p-6 flex sm:flex-col gap-1 sm:gap-1 overflow-x-auto sm:overflow-visible">
+          <aside className="sm:w-60 shrink-0 bg-muted/40 border-b sm:border-b-0 sm:border-r border-border p-5 sm:p-6 flex sm:flex-col gap-1 sm:gap-1 overflow-x-auto sm:overflow-visible">
             <h2
-              className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.14em] text-[#94a3b8] mb-6"
+              className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground mb-6"
               style={{ fontFamily: HEADING_FONT }}
             >
               Installation flow
@@ -174,16 +174,16 @@ export function FirmwareDialog() {
                     className={[
                       "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm shrink-0 transition-all duration-200",
                       active
-                        ? "bg-[#3b82f6]/10 text-[#3b82f6] font-semibold"
-                        : "text-[#94a3b8] hover:text-slate-700 hover:bg-[#e8ecf1]/60 font-medium",
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted font-medium",
                     ].join(" ")}
                   >
                     <span
                       className={[
                         "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
                         active
-                          ? "bg-[#3b82f6] text-white"
-                          : "border border-[#e8ecf1] bg-white text-[#94a3b8]",
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-border bg-card text-muted-foreground",
                       ].join(" ")}
                     >
                       {s.num}
@@ -198,7 +198,7 @@ export function FirmwareDialog() {
               <Link to="/setup" onClick={() => setOpen(false)}>
                 <button
                   type="button"
-                  className="flex items-center justify-between w-full px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[#94a3b8] hover:text-slate-700 transition-colors border-t border-[#e8ecf1] pt-5"
+                  className="flex items-center justify-between w-full px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors border-t border-border pt-5"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <Settings className="h-3.5 w-3.5" /> Setup
@@ -211,15 +211,15 @@ export function FirmwareDialog() {
 
           {/* ---------- Main ---------- */}
           <main className="flex-1 flex flex-col min-w-0">
-            <header className="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-[#e8ecf1] flex items-start justify-between gap-3">
+            <header className="px-6 sm:px-8 pt-6 sm:pt-8 pb-5 border-b border-border flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h1
-                  className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate"
+                  className="text-xl sm:text-2xl font-bold text-foreground tracking-tight truncate"
                   style={{ fontFamily: HEADING_FONT }}
                 >
                   Install ESP32 firmware
                 </h1>
-                <p className="text-xs sm:text-sm text-[#94a3b8] mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Configure, build, and flash your device from the browser.
                 </p>
               </div>
@@ -235,18 +235,18 @@ export function FirmwareDialog() {
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3
-                      className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-900"
+                      className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground"
                       style={{ fontFamily: HEADING_FONT }}
                     >
                       Build status
                     </h3>
                   </div>
                   <FirmwareBuildStatus />
-                  <p className="text-xs text-[#94a3b8] leading-relaxed">
-                    The <code className="text-slate-600">Verify build</code> button compares
-                    the compiled <code className="text-slate-600">.bin</code> against the
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    The <code className="text-muted-foreground">Verify build</code> button compares
+                    the compiled <code className="text-muted-foreground">.bin</code> against the
                     server manifest. When the binary is missing, drop it at{" "}
-                    <code className="text-slate-600">public/firmware/voltwatch-esp32.bin</code>{" "}
+                    <code className="text-muted-foreground">public/firmware/voltwatch-esp32.bin</code>{" "}
                     and refresh.
                   </p>
                 </section>
@@ -256,20 +256,20 @@ export function FirmwareDialog() {
                 <>
                   <section className="space-y-3">
                     <h3
-                      className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-900"
+                      className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground"
                       style={{ fontFamily: HEADING_FONT }}
                     >
                       Flash firmware for device
                     </h3>
                     {devices.length === 0 ? (
-                      <p className="text-xs text-[#94a3b8]">
+                      <p className="text-xs text-muted-foreground">
                         No devices yet. Add a device on the Devices page first, then come back —
                         the firmware will be pre-configured for it automatically.
                       </p>
                     ) : (
                       <>
                         <Select value={deviceId} onValueChange={setDeviceId}>
-                          <SelectTrigger className="bg-white border-[#e8ecf1] focus:ring-2 focus:ring-[#3b82f6]/20">
+                          <SelectTrigger className="bg-card border-border focus:ring-2 focus:ring-primary/20">
                             <SelectValue placeholder="Select a device" />
                           </SelectTrigger>
                           <SelectContent>
@@ -281,11 +281,11 @@ export function FirmwareDialog() {
                           </SelectContent>
                         </Select>
                         {selected && (
-                          <div className="flex items-start gap-2 text-xs text-slate-600 bg-[#3b82f6]/5 border border-[#3b82f6]/15 rounded-lg p-3">
-                            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#3b82f6] mt-px" />
+                          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg p-3">
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-primary mt-px" />
                             <span>
                               Ingest URL &amp; key for{" "}
-                              <span className="font-semibold text-slate-900">"{selected.name}"</span>{" "}
+                              <span className="font-semibold text-foreground">"{selected.name}"</span>{" "}
                               are baked in — the ESP32 setup portal only asks for WiFi.
                             </span>
                           </div>
@@ -297,29 +297,29 @@ export function FirmwareDialog() {
                   <section className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3
-                        className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-900"
+                        className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground"
                         style={{ fontFamily: HEADING_FONT }}
                       >
                         Flash from your browser
                       </h3>
-                      <span className="text-[10px] text-[#94a3b8]">Chrome / Edge</span>
+                      <span className="text-[10px] text-muted-foreground">Chrome / Edge</span>
                     </div>
 
-                    <p className="text-sm text-slate-600 leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       Plug the ESP32 in via USB, click Install, pick the serial port — done.
                     </p>
 
                     {!webSerialSupported ? (
-                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         <span>
                           Your browser doesn't support WebSerial. Open this page in desktop
                           Chrome or Edge, or use the Arduino IDE step.
                         </span>
                       </div>
                     ) : binReady === false ? (
-                      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                      <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         <div>
                           Compiled firmware isn't published yet. Drop the ESP32 binary at{" "}
                           <code>public/firmware/voltwatch-esp32.bin</code>. Until then, use the
@@ -330,20 +330,20 @@ export function FirmwareDialog() {
                       <esp-web-install-button manifest={MANIFEST_URL} erase-first>
                         <Button
                           slot="activate"
-                          className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold rounded-lg shadow-lg shadow-[#3b82f6]/20 h-11"
+                          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-lg shadow-primary/20 h-11"
                         >
                           <Zap className="mr-2 h-4 w-4" /> Install firmware
                         </Button>
-                        <span slot="unsupported" className="text-xs text-[#94a3b8]">
+                        <span slot="unsupported" className="text-xs text-muted-foreground">
                           Browser doesn't support WebSerial.
                         </span>
-                        <span slot="not-allowed" className="text-xs text-[#94a3b8]">
+                        <span slot="not-allowed" className="text-xs text-muted-foreground">
                           WebSerial requires HTTPS or localhost.
                         </span>
                       </esp-web-install-button>
                     )}
 
-                    <p className="text-[11px] text-[#94a3b8] leading-relaxed">
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
                       After flashing, join WiFi <code>Voltwatch-Setup</code> (pw{" "}
                       <code>voltwatch</code>) on your phone and enter your home WiFi. Onboard LED:
                       fast blink = portal open, slow blink = connecting, solid = online.
@@ -355,21 +355,21 @@ export function FirmwareDialog() {
               {step === "pair" && (
                 <section className="space-y-4">
                   <h3
-                    className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-900"
+                    className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground"
                     style={{ fontFamily: HEADING_FONT }}
                   >
                     Pair a freshly-flashed ESP32
                   </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Skip creating the device first — flash the generic firmware,
                     then join the ESP32's <code>Voltwatch-Setup</code> WiFi on
                     your phone and enter a 6-digit pairing code alongside your
                     home WiFi. The ESP will register itself into your account
                     and appear on the dashboard automatically.
                   </p>
-                  <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-600">
+                  <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
                     <li>Flash the firmware (any device selection is fine — the ESP will overwrite it during pairing).</li>
-                    <li>Click <span className="font-semibold text-slate-900">Get pairing code</span> below.</li>
+                    <li>Click <span className="font-semibold text-foreground">Get pairing code</span> below.</li>
                     <li>On your phone, join WiFi <code>Voltwatch-Setup</code> (pw <code>voltwatch</code>).</li>
                     <li>In the captive portal, enter your home WiFi + the code, then Save.</li>
                     <li>Watch this window — the device appears once claim succeeds.</li>
@@ -379,14 +379,14 @@ export function FirmwareDialog() {
                       trigger={
                         <Button
                           size="sm"
-                          className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
                           <PlugZap className="mr-1 h-4 w-4" /> Get pairing code
                         </Button>
                       }
                     />
                   </div>
-                  <p className="text-[11px] text-[#94a3b8] leading-relaxed">
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
                     Pairing codes expire after 10 minutes. Generate a fresh one if
                     the ESP wasn't ready in time.
                   </p>
@@ -398,20 +398,20 @@ export function FirmwareDialog() {
               {step === "advanced" && (
                 <section className="space-y-4">
                   <h3
-                    className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-900"
+                    className="text-[11px] font-bold uppercase tracking-[0.14em] text-foreground"
                     style={{ fontFamily: HEADING_FONT }}
                   >
                     Build & upload from Arduino IDE
                   </h3>
-                  <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-600">
+                  <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
                     <li>
                       Download <code>voltwatch.ino</code> and open it in Arduino IDE.
                     </li>
                     <li>
                       Install ESP32 board support and libraries:{" "}
-                      <span className="font-semibold text-slate-900">WiFiManager</span>,{" "}
-                      <span className="font-semibold text-slate-900">ArduinoJson</span>,{" "}
-                      <span className="font-semibold text-slate-900">DHT sensor library</span>.
+                      <span className="font-semibold text-foreground">WiFiManager</span>,{" "}
+                      <span className="font-semibold text-foreground">ArduinoJson</span>,{" "}
+                      <span className="font-semibold text-foreground">DHT sensor library</span>.
                     </li>
                     <li>
                       Board "ESP32 Dev Module" → pick COM port → Upload.
@@ -422,14 +422,14 @@ export function FirmwareDialog() {
                       size="sm"
                       variant="outline"
                       onClick={copy}
-                      className="border-[#e8ecf1] text-slate-700"
+                      className="border-border text-foreground"
                     >
                       <Copy className="mr-1 h-4 w-4" /> Copy code
                     </Button>
                     <Button
                       size="sm"
                       onClick={download}
-                      className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Download className="mr-1 h-4 w-4" /> Download voltwatch.ino
                     </Button>
