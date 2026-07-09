@@ -494,6 +494,12 @@ void setup() {
 
   loadConfig();
 
+  // Hostname must be set before WiFi enters STA mode so the DHCP client
+  // announces it to the router.
+  WiFi.mode(WIFI_STA);
+  WiFi.setHostname(cfgHostname.c_str());
+  Serial.printf("[cfg] hostname=%s\n", cfgHostname.c_str());
+
   if (digitalRead(PORTAL_BUTTON_PIN) == LOW) {
     Serial.println("[cfg] BOOT held — opening portal");
     startConfigPortal(true);
