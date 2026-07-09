@@ -309,7 +309,7 @@ export function SensorHistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl animate-scale-in">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[95vw] xl:max-w-[1400px] max-h-[95vh] overflow-y-auto animate-scale-in">
         <DialogHeader>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
@@ -478,7 +478,7 @@ export function SensorHistoryDialog({
         {/* Chart — stays mounted across range/field switches; recharts
             interpolates between data sets. A small loading dot shows in the
             corner while the new range is fetching. */}
-        <div className="relative h-[340px] w-full rounded-lg border bg-card p-3">
+        <div className="relative h-[420px] sm:h-[520px] lg:h-[620px] w-full rounded-lg border bg-card p-3">
           {isLoading && bucketed.length === 0 ? (
             <div className="flex h-full items-center justify-center text-muted-foreground">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading history…
