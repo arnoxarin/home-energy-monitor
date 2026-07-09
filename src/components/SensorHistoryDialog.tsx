@@ -503,7 +503,7 @@ export function SensorHistoryDialog({
                   </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="color-mix(in oklab, currentColor 12%, transparent)"
+                    stroke="var(--chart-grid)"
                   />
                   <XAxis dataKey="t" tick={{ fontSize: 11 }} minTickGap={24} />
                   <YAxis tick={{ fontSize: 11 }} width={40} domain={yDomain} allowDataOverflow />
