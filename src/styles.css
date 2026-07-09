@@ -275,6 +275,16 @@
   backdrop-filter: blur(12px) saturate(140%);
 }
 
+/* Secondary/status text inside tiles — brighter in dark mode */
+@utility tile-muted {
+  color: var(--tile-muted-fg);
+}
+@utility tile-on-muted {
+  color: var(--tile-on-muted-fg);
+}
+
+
+
 
 
 
