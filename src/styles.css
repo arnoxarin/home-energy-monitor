@@ -168,6 +168,9 @@
   --chart-grid: color-mix(in oklab, var(--foreground) 18%, transparent);
   --chart-line: var(--primary);
   --chart-line-muted: var(--foreground);
+  /* Brighter secondary text on tiles in dark mode */
+  --tile-muted-fg: oklch(0.94 0.01 256);
+  --tile-on-muted-fg: oklch(0.98 0.02 160);
 }
 
 @layer base {
