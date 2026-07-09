@@ -20,6 +20,7 @@ import { Route as ApiPublicIngestRouteImport } from './routes/api/public/ingest'
 import { Route as ApiPublicConfigRouteImport } from './routes/api/public/config'
 import { Route as AuthenticatedSensorsNewRouteImport } from './routes/_authenticated/sensors.new'
 import { Route as AuthenticatedSensorsSensorIdEditRouteImport } from './routes/_authenticated/sensors.$sensorId.edit'
+import { Route as AuthenticatedDevicesDeviceIdRegisterRouteImport } from './routes/_authenticated/devices.$deviceId.register'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -76,29 +77,37 @@ const AuthenticatedSensorsSensorIdEditRoute =
     path: '/sensors/$sensorId/edit',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDevicesDeviceIdRegisterRoute =
+  AuthenticatedDevicesDeviceIdRegisterRouteImport.update({
+    id: '/$deviceId/register',
+    path: '/$deviceId/register',
+    getParentRoute: () => AuthenticatedDevicesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/devices': typeof AuthenticatedDevicesRoute
+  '/devices': typeof AuthenticatedDevicesRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
   '/api/public/state': typeof ApiPublicStateRoute
+  '/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/devices': typeof AuthenticatedDevicesRoute
+  '/devices': typeof AuthenticatedDevicesRouteWithChildren
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
   '/api/public/state': typeof ApiPublicStateRoute
+  '/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
 }
 export interface FileRoutesById {
@@ -107,12 +116,13 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/devices': typeof AuthenticatedDevicesRoute
+  '/_authenticated/devices': typeof AuthenticatedDevicesRouteWithChildren
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/sensors/new': typeof AuthenticatedSensorsNewRoute
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
   '/api/public/state': typeof ApiPublicStateRoute
+  '/_authenticated/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/_authenticated/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
 }
 export interface FileRouteTypes {
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/api/public/config'
     | '/api/public/ingest'
     | '/api/public/state'
+    | '/devices/$deviceId/register'
     | '/sensors/$sensorId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/api/public/config'
     | '/api/public/ingest'
     | '/api/public/state'
+    | '/devices/$deviceId/register'
     | '/sensors/$sensorId/edit'
   id:
     | '__root__'
@@ -152,6 +164,7 @@ export interface FileRouteTypes {
     | '/api/public/config'
     | '/api/public/ingest'
     | '/api/public/state'
+    | '/_authenticated/devices/$deviceId/register'
     | '/_authenticated/sensors/$sensorId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -243,12 +256,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSensorsSensorIdEditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/devices/$deviceId/register': {
+      id: '/_authenticated/devices/$deviceId/register'
+      path: '/$deviceId/register'
+      fullPath: '/devices/$deviceId/register'
+      preLoaderRoute: typeof AuthenticatedDevicesDeviceIdRegisterRouteImport
+      parentRoute: typeof AuthenticatedDevicesRoute
+    }
   }
 }
 
+interface AuthenticatedDevicesRouteChildren {
+  AuthenticatedDevicesDeviceIdRegisterRoute: typeof AuthenticatedDevicesDeviceIdRegisterRoute
+}
+
+const AuthenticatedDevicesRouteChildren: AuthenticatedDevicesRouteChildren = {
+  AuthenticatedDevicesDeviceIdRegisterRoute:
+    AuthenticatedDevicesDeviceIdRegisterRoute,
+}
+
+const AuthenticatedDevicesRouteWithChildren =
+  AuthenticatedDevicesRoute._addFileChildren(AuthenticatedDevicesRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
+  AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRouteWithChildren
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedSensorsNewRoute: typeof AuthenticatedSensorsNewRoute
   AuthenticatedSensorsSensorIdEditRoute: typeof AuthenticatedSensorsSensorIdEditRoute
@@ -256,7 +288,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
+  AuthenticatedDevicesRoute: AuthenticatedDevicesRouteWithChildren,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
   AuthenticatedSensorsNewRoute: AuthenticatedSensorsNewRoute,
   AuthenticatedSensorsSensorIdEditRoute: AuthenticatedSensorsSensorIdEditRoute,
