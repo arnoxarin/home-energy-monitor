@@ -60,6 +60,7 @@ import {
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
 import { PairDeviceDialog } from "@/components/PairDeviceDialog";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
@@ -209,6 +210,7 @@ function Dashboard() {
             <PairDeviceDialog />
             <AddDeviceDialog />
 
+            <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
             </Button>
