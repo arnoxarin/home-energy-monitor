@@ -22,9 +22,12 @@ import {
   CheckCircle2,
   Settings,
   ChevronRight,
+  PlugZap,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { PairDeviceDialog } from "./PairDeviceDialog";
+
 // Vite bundles the .ino file as a raw string, so the firmware source
 // is always in sync with what's in the repo.
 import firmwareSource from "../../firmware/voltwatch/voltwatch.ino?raw";
