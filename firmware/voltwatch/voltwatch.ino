@@ -368,6 +368,7 @@ bool refreshConfig() {
   if (err) {
     Serial.printf("[config] parse err: %s\n", err.c_str());
     Serial.printf("[config] first 300 chars: %s\n", body.substring(0, 300).c_str());
+    saveConfigDiag(cfgConfigUrl, code, body, String("JSON parse: ") + err.c_str());
     return false;
   }
 
