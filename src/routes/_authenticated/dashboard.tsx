@@ -1038,7 +1038,7 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
       <div className={`mt-1 flex-1 min-h-0 ${latest ? "" : "opacity-50"}`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 6, right: 6, left: -24, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
             <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
             <YAxis tick={{ fontSize: 9 }} width={28} domain={latest ? ["auto", "auto"] : [0, 1]} />
             <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
@@ -1099,10 +1099,10 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
           <div className="mt-1 flex-1 min-h-0 opacity-50">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={flat} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                 <XAxis dataKey="t" hide />
                 <YAxis domain={[0, 1]} tick={{ fontSize: 9 }} width={28} />
-                <Line type="monotone" dataKey="v" stroke="currentColor" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="v" stroke="var(--chart-line-muted)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1156,7 +1156,7 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
         <div className="mt-1 flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
               <YAxis tick={{ fontSize: 9 }} width={28} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
