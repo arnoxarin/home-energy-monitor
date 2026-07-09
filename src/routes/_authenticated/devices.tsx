@@ -104,7 +104,9 @@ function DevicesPage() {
             </div>
             <span className="text-lg font-semibold">Devices</span>
           </div>
+          <PairDeviceDialog />
           <NewDeviceDialog onCreate={(n) => createDevice.mutate(n)} />
+
         </div>
       </header>
 
