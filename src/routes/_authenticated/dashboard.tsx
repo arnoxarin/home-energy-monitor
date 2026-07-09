@@ -138,6 +138,7 @@ function Dashboard() {
       if (error) throw error;
       return data as Device[];
     },
+    refetchInterval: 15_000,
   });
 
   const sensorsQ = useQuery({

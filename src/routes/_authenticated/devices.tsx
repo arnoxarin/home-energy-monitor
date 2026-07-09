@@ -66,6 +66,7 @@ function DevicesPage() {
       if (error) throw error;
       return data as Device[];
     },
+    refetchInterval: 15_000,
   });
 
   const createDevice = useMutation({
