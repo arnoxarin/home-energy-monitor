@@ -58,6 +58,7 @@ import {
   Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
+import { FirmwareDialog } from "@/components/FirmwareDialog";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -193,6 +194,7 @@ function Dashboard() {
               <Button variant="outline" size="sm">Devices</Button>
             </Link>
             <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
+            <FirmwareDialog />
             <AddDeviceDialog />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
