@@ -205,10 +205,10 @@
 @utility glass-tile-on {
   background: linear-gradient(
     135deg,
-    color-mix(in oklab, var(--color-primary) 55%, transparent) 0%,
-    color-mix(in oklab, var(--color-primary) 25%, transparent) 100%
+    color-mix(in oklab, #10b981 65%, transparent) 0%,
+    color-mix(in oklab, #059669 30%, transparent) 100%
   );
-  color: var(--color-primary-foreground);
+  color: #ffffff;
 }
 
 /* Small inner glass surface reused inside tiles (sub-values, switch bay) */
