@@ -406,6 +406,7 @@ bool refreshConfig() {
     sensorCount++;
   }
   Serial.printf("[config] %d sensor(s) loaded\n", sensorCount);
+  saveConfigDiag(cfgConfigUrl, code, body, String("OK, ") + sensorCount + " sensor(s)");
   return true;
 }
 
