@@ -113,6 +113,8 @@
   --chart-grid: color-mix(in oklab, var(--foreground) 12%, transparent);
   --chart-line: var(--primary);
   --chart-line-muted: var(--foreground);
+  --tile-muted-fg: var(--muted-foreground);
+  --tile-on-muted-fg: color-mix(in oklab, var(--tile-on-fg) 80%, transparent);
 }
 
 .dark {
