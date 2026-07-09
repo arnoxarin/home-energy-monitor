@@ -51,13 +51,15 @@ const HEADING_FONT = "'Space Grotesk', ui-sans-serif, system-ui, sans-serif";
 const BODY_FONT = "'DM Sans', ui-sans-serif, system-ui, sans-serif";
 
 type DeviceRow = { id: string; name: string; ingest_key: string };
-type StepKey = "build" | "flash" | "advanced";
+type StepKey = "build" | "flash" | "pair" | "advanced";
 
 const STEPS: { key: StepKey; label: string; num: string }[] = [
   { key: "build", num: "01", label: "Build & verify" },
   { key: "flash", num: "02", label: "Flash to device" },
-  { key: "advanced", num: "03", label: "Arduino IDE" },
+  { key: "pair", num: "03", label: "Pair via code" },
+  { key: "advanced", num: "04", label: "Arduino IDE" },
 ];
+
 
 export function FirmwareDialog() {
   const [open, setOpen] = useState(false);
