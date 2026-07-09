@@ -155,11 +155,8 @@ export function FirmwareBuildStatus() {
 
       <VerifyBuildRow available={!!status?.available} />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[11px] text-muted-foreground">
-          {status ? `Checked ${formatAgo(Date.now() - status.checkedAt)}` : "Waiting for first check"}
-          {" · auto-refreshes every 10s"}
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+
         <a
           href={BIN_URL}
           download
