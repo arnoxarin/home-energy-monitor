@@ -80,6 +80,21 @@ function PairDebugPage() {
     },
   });
 
+  const { data: attempts, refetch: refetchAttempts } = useQuery({
+    queryKey: ["my-ingest-attempts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ingest_attempts")
+        .select("id, ts, endpoint, key_masked, key_len, matched, device_id, fw_version, fw_build, ip, status")
+        .order("ts", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 5000,
+  });
+
+
   async function check() {
     if (!/^\d{6}$/.test(code)) {
       setResult({ ok: false, error: "Enter exactly 6 digits" });
