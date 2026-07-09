@@ -842,9 +842,15 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
 
   const isButton = sensor.view === "button";
   const on = isButton && Boolean((sensor.state as { on?: boolean }).on);
+  const latestReading = readingsQ.data?.[readingsQ.data.length - 1];
+  const alert = !isButton ? evaluateAlert(sensor, latestReading?.payload) : null;
 
   return (
-    <div className={`glass-tile group aspect-square flex flex-col p-2 text-xs ${on ? "glass-tile-on" : ""}`}>
+    <div
+      className={`glass-tile group aspect-square flex flex-col p-2 text-xs ${on ? "glass-tile-on" : ""} ${
+        alert ? "ring-2 ring-destructive/70 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]" : ""
+      }`}
+    >
       {/* Header */}
       <div className="relative z-10 flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -867,15 +873,31 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
             )}
           </div>
         </div>
-        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <Link to="/sensors/$sensorId/edit" params={{ sensorId: sensor.id }}>
-            <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit sensor">
-              <Pencil className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-1">
+          {alert && (
+            <Badge
+              variant="destructive"
+              className="flex items-center gap-1 px-1.5 py-0 text-[9px] uppercase"
+              title={
+                alert.level === "high"
+                  ? `${alert.field} ${alert.value.toFixed(2)} > max ${alert.max}`
+                  : `${alert.field} ${alert.value.toFixed(2)} < min ${alert.min}`
+              }
+            >
+              <AlertTriangle className="h-3 w-3" />
+              {alert.level}
+            </Badge>
+          )}
+          <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <Link to="/sensors/$sensorId/edit" params={{ sensorId: sensor.id }}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit sensor">
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSensor.mutate()} title="Delete sensor">
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
-          </Link>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSensor.mutate()} title="Delete sensor">
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          </div>
         </div>
       </div>
 
@@ -887,6 +909,14 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
           <NumericView sensor={sensor} readings={readingsQ.data ?? []} />
         ) : (
           <GraphView sensor={sensor} readings={readingsQ.data ?? []} />
+        )}
+        {alert && (
+          <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-destructive">
+            <AlertTriangle className="h-3 w-3" />
+            {alert.level === "high"
+              ? `${alert.field} above ${alert.max}${sensor.unit ? ` ${sensor.unit}` : ""}`
+              : `${alert.field} below ${alert.min}${sensor.unit ? ` ${sensor.unit}` : ""}`}
+          </p>
         )}
       </div>
     </div>
