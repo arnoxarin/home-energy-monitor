@@ -30,7 +30,11 @@ interface SensorRow {
   pin: string | null;
   view: SensorView;
   unit: string | null;
-  state: { on?: boolean; pins?: Record<string, string> } | null;
+  state: {
+    on?: boolean;
+    pins?: Record<string, string>;
+    alerts?: { field?: string | null; min?: number | null; max?: number | null };
+  } | null;
 }
 interface Device { id: string; name: string; }
 
