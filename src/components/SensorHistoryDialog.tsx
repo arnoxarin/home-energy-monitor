@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -19,8 +22,33 @@ import {
   Tooltip,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, subMonths, subYears, startOfHour, startOfDay, startOfMonth } from "date-fns";
-import { Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import {
+  format,
+  addDays,
+  addMonths,
+  addYears,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  startOfHour,
+  isSameDay,
+  isAfter,
+} from "date-fns";
+import {
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  CalendarIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Range = "day" | "week" | "month" | "year";
 
@@ -38,19 +66,42 @@ interface Sensor {
 }
 
 const RANGE_META: Record<Range, { label: string; hint: string }> = {
-  day: { label: "Day", hint: "Last 24 hours · hourly buckets" },
-  week: { label: "Week", hint: "Last 7 days · hourly buckets" },
-  month: { label: "Month", hint: "Last 30 days · daily buckets" },
-  year: { label: "Year", hint: "Last 12 months · monthly buckets" },
+  day: { label: "Day", hint: "Hourly buckets" },
+  week: { label: "Week", hint: "Hourly buckets, Mon–Sun" },
+  month: { label: "Month", hint: "Daily buckets" },
+  year: { label: "Year", hint: "Monthly buckets" },
 };
 
-function rangeStart(range: Range): Date {
-  const now = new Date();
+// Compute the window around an anchor date for the current range.
+function rangeWindow(range: Range, anchor: Date): { start: Date; end: Date } {
   switch (range) {
-    case "day": return subDays(now, 1);
-    case "week": return subDays(now, 7);
-    case "month": return subMonths(now, 1);
-    case "year": return subYears(now, 1);
+    case "day":   return { start: startOfDay(anchor),   end: endOfDay(anchor) };
+    case "week":  return { start: startOfWeek(anchor, { weekStartsOn: 1 }), end: endOfWeek(anchor, { weekStartsOn: 1 }) };
+    case "month": return { start: startOfMonth(anchor), end: endOfMonth(anchor) };
+    case "year":  return { start: startOfYear(anchor),  end: endOfYear(anchor) };
+  }
+}
+
+// Step the anchor by one range unit forward/backward.
+function stepAnchor(range: Range, anchor: Date, dir: 1 | -1): Date {
+  switch (range) {
+    case "day":   return addDays(anchor, dir);
+    case "week":  return addDays(anchor, dir * 7);
+    case "month": return addMonths(anchor, dir);
+    case "year":  return addYears(anchor, dir);
+  }
+}
+
+// Human label for the currently selected window (used in the picker button).
+function windowLabel(range: Range, anchor: Date): string {
+  switch (range) {
+    case "day":   return format(anchor, "EEE, MMM d, yyyy");
+    case "week": {
+      const { start, end } = rangeWindow("week", anchor);
+      return `${format(start, "MMM d")} – ${format(end, "MMM d, yyyy")}`;
+    }
+    case "month": return format(anchor, "MMMM yyyy");
+    case "year":  return format(anchor, "yyyy");
   }
 }
 
@@ -67,6 +118,7 @@ function bucketKey(ts: Date, range: Range): { key: number; label: string } {
   return { key: d.getTime(), label: format(d, "MMM yy") };
 }
 
+
 export function SensorHistoryDialog({
   sensor,
   open,
@@ -79,20 +131,26 @@ export function SensorHistoryDialog({
   initialField?: string;
 }) {
   const [range, setRange] = useState<Range>("day");
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [field, setField] = useState<string | undefined>(initialField);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const { start, end } = useMemo(() => rangeWindow(range, anchor), [range, anchor]);
+  const canGoForward = !isAfter(end, new Date());
 
   const { data: readings = [], isFetching, isLoading } = useQuery<Reading[]>({
-    queryKey: ["sensor-history", sensor.id, range],
+    queryKey: ["sensor-history", sensor.id, range, start.toISOString()],
     enabled: open,
-    // Keep previous range's data on screen while the new range loads —
-    // prevents the chart from unmounting and flickering during tab switches.
+    // Keep previous data on screen while the new window loads —
+    // prevents the chart from unmounting and flickering.
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sensor_readings")
         .select("id, ts, payload")
         .eq("sensor_id", sensor.id)
-        .gte("ts", rangeStart(range).toISOString())
+        .gte("ts", start.toISOString())
+        .lte("ts", end.toISOString())
         .order("ts", { ascending: true })
         .limit(10000);
       if (error) throw error;
@@ -185,6 +243,93 @@ export function SensorHistoryDialog({
             </div>
           )}
         </div>
+
+        {/* Date navigator: prev / date picker / next / today */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setAnchor((a) => stepAnchor(range, a, -1))}
+            aria-label={`Previous ${range}`}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn("h-8 min-w-[180px] justify-start gap-2 font-normal")}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span className="truncate">{windowLabel(range, anchor)}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={anchor}
+                onSelect={(d) => {
+                  if (d) {
+                    setAnchor(d);
+                    setPickerOpen(false);
+                  }
+                }}
+                disabled={(d) => isAfter(d, new Date())}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setAnchor((a) => stepAnchor(range, a, 1))}
+            disabled={!canGoForward}
+            aria-label={`Next ${range}`}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() => setAnchor(new Date())}
+            disabled={isSameDay(anchor, new Date())}
+          >
+            Today
+          </Button>
+
+          {/* Quick month jumps for month/year ranges */}
+          {(range === "month" || range === "year") && (
+            <div className="ml-auto flex gap-1">
+              {[-3, -2, -1, 0].map((offset) => {
+                const d = range === "month" ? addMonths(new Date(), offset) : addYears(new Date(), offset);
+                const label = range === "month" ? format(d, "MMM") : format(d, "yyyy");
+                const active =
+                  range === "month"
+                    ? format(d, "yyyy-MM") === format(anchor, "yyyy-MM")
+                    : format(d, "yyyy") === format(anchor, "yyyy");
+                return (
+                  <Badge
+                    key={offset}
+                    variant={active ? "default" : "outline"}
+                    className="cursor-pointer transition-all hover:scale-105"
+                    onClick={() => setAnchor(d)}
+                  >
+                    {label}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
 
         {/* Stat strip — values transition individually, container never remounts */}
         {stats && (
