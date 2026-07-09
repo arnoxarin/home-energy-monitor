@@ -95,6 +95,24 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* Semantic surface tokens (tiles, chips, charts) */
+  --tile-bg: var(--card);
+  --tile-border: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --tile-shadow: 0 8px 20px -14px color-mix(in oklab, black 40%, transparent);
+  --tile-shadow-hover: 0 12px 24px -14px color-mix(in oklab, black 50%, transparent);
+  --tile-on-bg: oklch(0.72 0.17 160);
+  --tile-on-fg: oklch(0.99 0.01 160);
+  --tile-on-border: color-mix(in oklab, var(--tile-on-bg) 60%, transparent);
+  --chip-bg: color-mix(in oklab, var(--card) 55%, transparent);
+  --chip-border: color-mix(in oklab, var(--foreground) 8%, transparent);
+  --chip-shadow: 0 6px 14px -10px color-mix(in oklab, var(--foreground) 25%, transparent);
+  --frame-bg-start: color-mix(in oklab, var(--card) 40%, transparent);
+  --frame-bg-end: color-mix(in oklab, var(--primary) 6%, transparent);
+  --frame-border: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --chart-grid: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --chart-line: var(--primary);
+  --chart-line-muted: var(--foreground);
 }
 
 .dark {
