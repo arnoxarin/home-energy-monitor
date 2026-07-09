@@ -80,6 +80,59 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_attempts: {
+        Row: {
+          device_id: string | null
+          endpoint: string
+          fw_build: string | null
+          fw_version: string | null
+          id: number
+          ip: string | null
+          key_len: number
+          key_masked: string
+          matched: boolean
+          status: number | null
+          ts: string
+          user_id: string | null
+        }
+        Insert: {
+          device_id?: string | null
+          endpoint: string
+          fw_build?: string | null
+          fw_version?: string | null
+          id?: never
+          ip?: string | null
+          key_len: number
+          key_masked: string
+          matched: boolean
+          status?: number | null
+          ts?: string
+          user_id?: string | null
+        }
+        Update: {
+          device_id?: string | null
+          endpoint?: string
+          fw_build?: string | null
+          fw_version?: string | null
+          id?: never
+          ip?: string | null
+          key_len?: number
+          key_masked?: string
+          matched?: boolean
+          status?: number | null
+          ts?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_attempts_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sensor_readings: {
         Row: {
           id: number
