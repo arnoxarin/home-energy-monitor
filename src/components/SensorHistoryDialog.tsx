@@ -131,20 +131,26 @@ export function SensorHistoryDialog({
   initialField?: string;
 }) {
   const [range, setRange] = useState<Range>("day");
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [field, setField] = useState<string | undefined>(initialField);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const { start, end } = useMemo(() => rangeWindow(range, anchor), [range, anchor]);
+  const canGoForward = !isAfter(end, new Date());
 
   const { data: readings = [], isFetching, isLoading } = useQuery<Reading[]>({
-    queryKey: ["sensor-history", sensor.id, range],
+    queryKey: ["sensor-history", sensor.id, range, start.toISOString()],
     enabled: open,
-    // Keep previous range's data on screen while the new range loads —
-    // prevents the chart from unmounting and flickering during tab switches.
+    // Keep previous data on screen while the new window loads —
+    // prevents the chart from unmounting and flickering.
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sensor_readings")
         .select("id, ts, payload")
         .eq("sensor_id", sensor.id)
-        .gte("ts", rangeStart(range).toISOString())
+        .gte("ts", start.toISOString())
+        .lte("ts", end.toISOString())
         .order("ts", { ascending: true })
         .limit(10000);
       if (error) throw error;
