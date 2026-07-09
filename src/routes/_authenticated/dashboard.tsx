@@ -582,13 +582,15 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <SortableSensorGrid
-          storageKey={`sensor-layout:${device.id}`}
-          sensors={sensors}
-          compact={compact}
-          editing={editing}
-        />
-
+        <>
+          <SensorGraphPanel sensors={sensors} />
+          <SortableSensorGrid
+            storageKey={`sensor-layout:${device.id}`}
+            sensors={sensors}
+            compact={compact}
+            editing={editing}
+          />
+        </>
       )}
 
 
