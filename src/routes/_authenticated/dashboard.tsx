@@ -984,60 +984,74 @@ function pickPrimaryField(kind: SensorKind, payload: Record<string, number>): st
 
 function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }) {
   const latest = readings[readings.length - 1];
-  if (!latest) {
-    return (
-      <div className="flex h-full flex-col justify-between">
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">value</p>
-          <p className="text-3xl font-bold leading-tight text-muted-foreground/60">
-            0.00
-            {sensor.unit ? <span className="ml-1 text-sm font-normal">{sensor.unit}</span> : null}
-          </p>
-        </div>
-        <p className="mt-2 text-[10px] text-muted-foreground">Waiting for data…</p>
-      </div>
-    );
-  }
+  const field = useMemo(
+    () => (latest ? pickPrimaryField(sensor.kind, latest.payload) : "value"),
+    [latest, sensor.kind],
+  );
+  const [selected, setSelected] = useState<string | null>(null);
+  const activeField = selected ?? field;
+  const availableFields = latest ? Object.keys(latest.payload) : [];
 
-  const entries = Object.entries(latest.payload);
-  const primary = entries[0];
-  const rest = entries.slice(1);
+  const data = readings.map((r, i) => ({
+    t: r.ts ? new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : String(i),
+    v: Number(r.payload?.[activeField] ?? 0),
+  }));
+  const flat = Array.from({ length: 10 }, (_, i) => ({ t: String(i), v: 0 }));
+  const chartData = latest ? data : flat;
+
   return (
-    <div className="flex h-full flex-col justify-between">
-      {primary && (
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{primary[0]}</p>
-          <p className="text-3xl font-bold leading-tight">
-            {typeof primary[1] === "number" ? (primary[1] as number).toFixed(2) : String(primary[1])}
-            {sensor.unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{sensor.unit}</span> : null}
+    <div className="flex h-full flex-col animate-fade-in">
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-2xl font-bold leading-tight">
+            {latest && typeof latest.payload[activeField] === "number"
+              ? (latest.payload[activeField] as number).toFixed(2)
+              : "0.00"}
+            {sensor.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span> : null}
           </p>
+          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{activeField}</p>
         </div>
-      )}
-      {rest.length > 0 && (
-        <div className="mt-1 grid grid-cols-2 gap-1">
-          {rest.slice(0, 4).map(([k, v]) => (
-            <div key={k} className="glass-chip px-1.5 py-0.5">
-              <p className="truncate text-[9px] uppercase text-muted-foreground">{k}</p>
-              <p className="truncate text-[11px] font-semibold">
-                {typeof v === "number" ? v.toFixed(2) : String(v)}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="mt-1 h-6 flex items-end gap-[2px]">
-        {readings.slice(-14).map((r, i) => {
-          const v = Number(r.payload[primary?.[0] ?? "value"] ?? 0);
-          const vals = readings.slice(-14).map((x) => Number(x.payload[primary?.[0] ?? "value"] ?? 0));
-          const min = Math.min(...vals);
-          const max = Math.max(...vals);
-          const h = max - min > 0 ? ((v - min) / (max - min)) * 90 + 10 : 40;
-          return <div key={i} className="flex-1 rounded-sm bg-primary/50" style={{ height: `${h}%` }} />;
-        })}
+        {availableFields.length > 1 && (
+          <div className="flex flex-wrap justify-end gap-1 max-w-[55%]">
+            {availableFields.slice(0, 4).map((f) => (
+              <Badge
+                key={f}
+                variant={f === activeField ? "default" : "outline"}
+                className="cursor-pointer px-1.5 py-0 text-[9px] backdrop-blur-md transition-transform hover:scale-105"
+                onClick={(e) => { e.stopPropagation(); setSelected(f); }}
+              >
+                {f}
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
+      <div className={`mt-1 flex-1 min-h-0 ${latest ? "" : "opacity-50"}`}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 6, right: 6, left: -24, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+            <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
+            <YAxis tick={{ fontSize: 9 }} width={28} domain={latest ? ["auto", "auto"] : [0, 1]} />
+            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
+            <Line
+              type="monotone"
+              dataKey="v"
+              stroke="var(--color-primary)"
+              strokeWidth={2}
+              dot={{ r: 2.5, fill: "var(--color-primary)", strokeWidth: 0 }}
+              activeDot={{ r: 4 }}
+              isAnimationActive
+              animationDuration={600}
+              animationEasing="ease-out"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      {!latest && <p className="mt-1 text-[10px] text-muted-foreground text-center">Waiting for data…</p>}
     </div>
   );
 }
+
 
 function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }) {
   const latest = readings[readings.length - 1];
