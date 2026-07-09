@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -19,8 +22,33 @@ import {
   Tooltip,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, subMonths, subYears, startOfHour, startOfDay, startOfMonth } from "date-fns";
-import { Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import {
+  format,
+  addDays,
+  addMonths,
+  addYears,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  startOfHour,
+  isSameDay,
+  isAfter,
+} from "date-fns";
+import {
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  CalendarIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Range = "day" | "week" | "month" | "year";
 
@@ -38,19 +66,42 @@ interface Sensor {
 }
 
 const RANGE_META: Record<Range, { label: string; hint: string }> = {
-  day: { label: "Day", hint: "Last 24 hours · hourly buckets" },
-  week: { label: "Week", hint: "Last 7 days · hourly buckets" },
-  month: { label: "Month", hint: "Last 30 days · daily buckets" },
-  year: { label: "Year", hint: "Last 12 months · monthly buckets" },
+  day: { label: "Day", hint: "Hourly buckets" },
+  week: { label: "Week", hint: "Hourly buckets, Mon–Sun" },
+  month: { label: "Month", hint: "Daily buckets" },
+  year: { label: "Year", hint: "Monthly buckets" },
 };
 
-function rangeStart(range: Range): Date {
-  const now = new Date();
+// Compute the window around an anchor date for the current range.
+function rangeWindow(range: Range, anchor: Date): { start: Date; end: Date } {
   switch (range) {
-    case "day": return subDays(now, 1);
-    case "week": return subDays(now, 7);
-    case "month": return subMonths(now, 1);
-    case "year": return subYears(now, 1);
+    case "day":   return { start: startOfDay(anchor),   end: endOfDay(anchor) };
+    case "week":  return { start: startOfWeek(anchor, { weekStartsOn: 1 }), end: endOfWeek(anchor, { weekStartsOn: 1 }) };
+    case "month": return { start: startOfMonth(anchor), end: endOfMonth(anchor) };
+    case "year":  return { start: startOfYear(anchor),  end: endOfYear(anchor) };
+  }
+}
+
+// Step the anchor by one range unit forward/backward.
+function stepAnchor(range: Range, anchor: Date, dir: 1 | -1): Date {
+  switch (range) {
+    case "day":   return addDays(anchor, dir);
+    case "week":  return addDays(anchor, dir * 7);
+    case "month": return addMonths(anchor, dir);
+    case "year":  return addYears(anchor, dir);
+  }
+}
+
+// Human label for the currently selected window (used in the picker button).
+function windowLabel(range: Range, anchor: Date): string {
+  switch (range) {
+    case "day":   return format(anchor, "EEE, MMM d, yyyy");
+    case "week": {
+      const { start, end } = rangeWindow("week", anchor);
+      return `${format(start, "MMM d")} – ${format(end, "MMM d, yyyy")}`;
+    }
+    case "month": return format(anchor, "MMMM yyyy");
+    case "year":  return format(anchor, "yyyy");
   }
 }
 
@@ -66,6 +117,7 @@ function bucketKey(ts: Date, range: Range): { key: number; label: string } {
   const d = startOfMonth(ts);
   return { key: d.getTime(), label: format(d, "MMM yy") };
 }
+
 
 export function SensorHistoryDialog({
   sensor,
