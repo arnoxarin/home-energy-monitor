@@ -198,21 +198,7 @@
   }
 }
 
-/* Belt-and-suspenders: while the browser is running a view transition,
-   suppress any color/background transitions so the snapshot stays crisp. */
-html:has(::view-transition),
-html:has(::view-transition) * {
-  transition: none !important;
-  animation-duration: 0s;
-}
-/* But keep the reveal animation itself running. */
-::view-transition-group(root),
-::view-transition-image-pair(root),
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 500ms;
-}
-}
+
 
 /* View Transitions API: circular reveal from toggle origin */
 ::view-transition-old(root),
