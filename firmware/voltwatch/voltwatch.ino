@@ -286,6 +286,7 @@ bool claimWithCode(const String& code) {
 
   HTTPClient http;
   http.begin(cfgClaimUrl);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   int status = http.POST(out);
   Serial.printf("[claim] status %d\n", status);
@@ -323,6 +324,7 @@ void refreshConfig() {
 
   HTTPClient http;
   http.begin(cfgConfigUrl);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
   http.addHeader("x-fw-build", FW_BUILD);
@@ -415,6 +417,7 @@ void collectAndPost() {
 
   HTTPClient http;
   http.begin(cfgIngest);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
