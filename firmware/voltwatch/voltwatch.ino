@@ -4,9 +4,11 @@
 //   - The ESP32 has no saved WiFi, so it starts its own access
 //     point "Voltwatch-Setup" (password: voltwatch).
 //   - Connect your phone to it. A captive portal opens.
-//   - Enter your home WiFi, the ingest endpoint (e.g.
-//     https://your-app.lovable.app/api/public/ingest), and the
-//     device ingest key from the dashboard. Save. It reboots.
+//   - Enter your home WiFi. Then EITHER:
+//       (a) type a 6-digit pairing code from the dashboard
+//           ("Pair new device"), OR
+//       (b) type the ingest URL and device key manually.
+//     Save. It reboots.
 //
 // After that:
 //   - The firmware pulls the current sensor list from the app
@@ -34,24 +36,20 @@
 #include <DHT.h>
 
 // ---------- Firmware identity ----------
-// Bump FW_VERSION whenever behavior changes (LED logic, protocol, sensors).
-// FW_BUILD is baked in at compile time so the dashboard can tell two builds
-// of the same version apart.
-#define FW_VERSION "1.1.0"
+#define FW_VERSION "1.2.0"
 #define FW_BUILD   (__DATE__ " " __TIME__)
 
 // ---------- Compile-time defaults ----------
-// These are auto-substituted by the dashboard when you download the .ino
-// for a specific device: the ingest URL becomes your app's origin and the
-// key becomes that device's ingest key. When both are baked in, the WiFi
-// setup portal only asks for WiFi credentials — no URL or key to type.
-// Leave the placeholders (https://c8ab56ed-ab9f-4b4a-b700-c695543bf1e4.lovableproject.com/api/public/ingest / 73867fd574b52124d8b832d3afcd97ee4b703b0c017f654e) if you're
-// building manually; the portal will ask for them at first boot.
+// The dashboard auto-substitutes DEFAULT_INGEST_URL / DEFAULT_INGEST_KEY
+// when you download the .ino for a specific device. When placeholders
+// remain (values starting with "__"), the captive portal prompts for
+// them, and a pairing code can be used instead of typing them by hand.
 #define DEFAULT_INGEST_URL "https://c8ab56ed-ab9f-4b4a-b700-c695543bf1e4.lovableproject.com/api/public/ingest"
 #define DEFAULT_INGEST_KEY "73867fd574b52124d8b832d3afcd97ee4b703b0c017f654e"
+#define DEFAULT_CLAIM_URL  "__CLAIM_URL__"
 
 static bool isPlaceholder(const String& s) {
-  return s.length() == 0 || s.startsWith("__") ;
+  return s.length() == 0 || s.startsWith("__");
 }
 
 // ---------- Persistent config ----------
@@ -59,6 +57,7 @@ Preferences prefs;
 String cfgIngest;     // .../api/public/ingest
 String cfgKey;        // device ingest key
 String cfgConfigUrl;  // derived: .../api/public/config
+String cfgClaimUrl;   // .../api/public/claim  (pairing endpoint)
 
 const char* AP_NAME = "Voltwatch-Setup";
 const char* AP_PASS = "voltwatch";
@@ -73,18 +72,9 @@ unsigned long lastPost = 0;
 unsigned long lastConfig = 0;
 
 // ---------- Status LED ----------
-// States:
-//   PORTAL     -> fast blink   (150 ms) : captive portal is up, waiting for you
-//   CONNECTING -> slow blink   (600 ms) : trying to join saved WiFi
-//   ONLINE     -> solid on               : connected and posting
-//   ERROR      -> double-blink pattern  : lost WiFi mid-run
 enum LedState { LED_PORTAL, LED_CONNECTING, LED_ONLINE, LED_ERROR };
 LedState ledState = LED_CONNECTING;
 
-// Takes an int (not LedState) on purpose: the Arduino preprocessor
-// auto-inserts a prototype for this function ABOVE the enum declaration,
-// so a `LedState` parameter breaks the build ("'LedState' was not
-// declared in this scope"). Same reason applySensor() takes an index.
 void setLed(int s) { ledState = (LedState)s; }
 
 void updateLed() {
@@ -104,7 +94,6 @@ void updateLed() {
     case LED_CONNECTING: blink(600); break;
     case LED_ONLINE:     digitalWrite(STATUS_LED_PIN, HIGH); break;
     case LED_ERROR: {
-      // pattern: on 100, off 100, on 100, off 700
       const unsigned long steps[] = {100, 100, 100, 700};
       if (now - lastToggle >= steps[pulseIdx]) {
         lastToggle = now;
@@ -117,20 +106,13 @@ void updateLed() {
 }
 
 // ---------- Dynamic sensor table ----------
-// NOTE: keep the Sensor struct + any function that takes a Sensor& in this
-// single-file .ino OUT of function signatures. The Arduino preprocessor
-// auto-inserts function prototypes at the top of the file (above every
-// declaration), so a `void applySensor(Sensor&)` signature would generate
-// a prototype that references `Sensor` before the struct is declared and
-// the build fails. Using an index (`int i`) keeps the auto-prototype valid
-// with no header file required.
 struct Sensor {
   String id;
-  String kind;   // "dht22" | "relay" | "analog" | "digital" | "ultrasonic" | ...
-  int    pin;    // primary pin (data / signal / out)
-  int    pinB;   // secondary pin (e.g. ultrasonic ECHO), -1 if unused
-  bool   desiredOn; // for relays
-  DHT*   dht;    // lazily allocated for DHT22
+  String kind;
+  int    pin;
+  int    pinB;
+  bool   desiredOn;
+  DHT*   dht;
 };
 
 Sensor sensors[MAX_SENSORS];
@@ -141,7 +123,6 @@ int parsePin(const char* s) {
   return atoi(s);
 }
 
-// Reset previously configured pins (mainly relays) before reconfig
 void tearDownSensors() {
   for (int i = 0; i < sensorCount; i++) {
     if (sensors[i].dht) { delete sensors[i].dht; sensors[i].dht = nullptr; }
@@ -152,7 +133,6 @@ void tearDownSensors() {
   sensorCount = 0;
 }
 
-// Takes an index into `sensors[]` (not a Sensor&) on purpose — see note above.
 void applySensor(int i) {
   Sensor& s = sensors[i];
   if (s.kind == "dht22" && s.pin >= 0) {
@@ -167,28 +147,34 @@ void applySensor(int i) {
     if (s.pin  >= 0) pinMode(s.pin,  OUTPUT);
     if (s.pinB >= 0) pinMode(s.pinB, INPUT);
   }
-  // analog pins on ESP32 don't need pinMode
 }
 
 // ---------- WiFi + captive portal ----------
+bool claimWithCode(const String& code);
+
 void startConfigPortal(bool onDemand) {
   WiFiManager wm;
 
-  // Only expose endpoint/key fields when they aren't already baked into
-  // this firmware build. When the dashboard personalized the .ino, the
-  // portal is WiFi-only.
-  bool needEndpoint = isPlaceholder(String(DEFAULT_INGEST_URL));
-  bool needKey      = isPlaceholder(String(DEFAULT_INGEST_KEY));
+  bool haveEndpoint = !isPlaceholder(String(DEFAULT_INGEST_URL));
+  bool haveKey      = !isPlaceholder(String(DEFAULT_INGEST_KEY));
+  bool haveClaim    = !isPlaceholder(String(DEFAULT_CLAIM_URL));
+  bool needEndpoint = !haveEndpoint;
+  bool needKey      = !haveKey;
 
   WiFiManagerParameter pEndpoint("endpoint", "Ingest URL (https://.../api/public/ingest)",
                                  cfgIngest.c_str(), 200);
   WiFiManagerParameter pKey("key", "Device ingest key",
                             cfgKey.c_str(), 80);
+  // Pairing code (6 digits from the dashboard) — offered whenever we know
+  // a claim endpoint (either baked in, or derivable from the ingest URL).
+  WiFiManagerParameter pCode("paircode", "Pairing code (6 digits, optional)", "", 8);
+  bool offerCode = haveClaim || needEndpoint;
+
   if (needEndpoint) wm.addParameter(&pEndpoint);
   if (needKey)      wm.addParameter(&pKey);
+  if (offerCode)    wm.addParameter(&pCode);
   wm.setConfigPortalTimeout(300);
 
-  // Blink LED fast while the portal is up so the user knows to connect
   setLed(LED_PORTAL);
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
   wm.setSaveConfigCallback([]() { setLed(LED_CONNECTING); });
@@ -204,6 +190,16 @@ void startConfigPortal(bool onDemand) {
   prefs.putString("key",    cfgKey);
   prefs.end();
   Serial.println("[cfg] saved");
+
+  // If a pairing code was entered (and we still lack an ingest key), redeem
+  // it now that WiFi is up. On success this also persists ingest URL/key.
+  String code = String(pCode.getValue());
+  code.trim();
+  if (offerCode && code.length() == 6 && cfgKey.length() == 0) {
+    Serial.println("[cfg] attempting pairing claim");
+    if (claimWithCode(code)) Serial.println("[cfg] paired ok");
+    else                     Serial.println("[cfg] pairing failed");
+  }
   setLed(LED_ONLINE);
 }
 
@@ -213,17 +209,65 @@ void loadConfig() {
   cfgKey    = prefs.getString("key", "");
   prefs.end();
 
-  // Fall back to compile-time defaults when nothing is saved yet or when
-  // the .ino was personalized for a specific device by the dashboard.
-  String defUrl = String(DEFAULT_INGEST_URL);
-  String defKey = String(DEFAULT_INGEST_KEY);
+  String defUrl   = String(DEFAULT_INGEST_URL);
+  String defKey   = String(DEFAULT_INGEST_KEY);
+  String defClaim = String(DEFAULT_CLAIM_URL);
   if (cfgIngest.length() == 0 && !isPlaceholder(defUrl)) cfgIngest = defUrl;
   if (cfgKey.length()    == 0 && !isPlaceholder(defKey)) cfgKey    = defKey;
 
-  // derive config URL from ingest URL by swapping the last path segment
   cfgConfigUrl = cfgIngest;
   int slash = cfgConfigUrl.lastIndexOf('/');
   if (slash > 0) cfgConfigUrl = cfgConfigUrl.substring(0, slash) + "/config";
+
+  if (!isPlaceholder(defClaim)) {
+    cfgClaimUrl = defClaim;
+  } else if (cfgIngest.length() > 0 && slash > 0) {
+    cfgClaimUrl = cfgIngest.substring(0, slash) + "/claim";
+  }
+}
+
+// ---------- Pairing (claim) ----------
+// POSTs {"code":"123456","fw_version":..,"fw_build":..} to the claim URL,
+// receives {"ingest_url":..,"ingest_key":..} and persists it.
+bool claimWithCode(const String& code) {
+  if (cfgClaimUrl.length() == 0) { Serial.println("[claim] no claim URL"); return false; }
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  DynamicJsonDocument body(256);
+  body["code"]       = code;
+  body["fw_version"] = FW_VERSION;
+  body["fw_build"]   = FW_BUILD;
+  String out;
+  serializeJson(body, out);
+
+  HTTPClient http;
+  http.begin(cfgClaimUrl);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // follow http->https / canonical host
+  http.addHeader("Content-Type", "application/json");
+  int status = http.POST(out);
+  Serial.printf("[claim] status %d\n", status);
+  if (status != 200) { http.end(); return false; }
+
+  String resp = http.getString();
+  http.end();
+
+  DynamicJsonDocument doc(1024);
+  if (deserializeJson(doc, resp)) { Serial.println("[claim] bad JSON"); return false; }
+  const char* url = doc["ingest_url"] | "";
+  const char* key = doc["ingest_key"] | "";
+  if (!*url || !*key) return false;
+
+  cfgIngest = String(url);
+  cfgKey    = String(key);
+  cfgConfigUrl = cfgIngest;
+  int s2 = cfgConfigUrl.lastIndexOf('/');
+  if (s2 > 0) cfgConfigUrl = cfgConfigUrl.substring(0, s2) + "/config";
+
+  prefs.begin("voltwatch", false);
+  prefs.putString("ingest", cfgIngest);
+  prefs.putString("key",    cfgKey);
+  prefs.end();
+  return true;
 }
 
 // ---------- Config fetch: rebuild sensor table ----------
@@ -232,6 +276,7 @@ void refreshConfig() {
 
   HTTPClient http;
   http.begin(cfgConfigUrl);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // fixes [config] 302
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
   http.addHeader("x-fw-build", FW_BUILD);
@@ -257,7 +302,6 @@ void refreshConfig() {
     out.desiredOn = s["on"] | false;
     out.dht = nullptr;
 
-    // Multi-pin sensors: pick out named roles from state.pins
     JsonObject pins = s["pins"].as<JsonObject>();
     if (out.kind == "ultrasonic") {
       out.pin  = parsePin(pins["trig"] | "");
@@ -298,7 +342,7 @@ void collectAndPost() {
 
   for (int i = 0; i < sensorCount; i++) {
     Sensor& s = sensors[i];
-    if (s.kind == "relay") continue; // outputs only, no reading
+    if (s.kind == "relay") continue;
     JsonObject r = readings.createNestedObject();
     r["sensor_id"] = s.id;
     JsonObject p = r.createNestedObject("payload");
@@ -316,7 +360,6 @@ void collectAndPost() {
       long cm = readUltrasonicCm(s.pin, s.pinB);
       if (cm >= 0) p["distance"] = (int)cm;
     }
-    // Add more sensor kinds here as they're added to the dashboard.
   }
 
   String body;
@@ -324,6 +367,7 @@ void collectAndPost() {
 
   HTTPClient http;
   http.begin(cfgIngest);
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
@@ -331,7 +375,6 @@ void collectAndPost() {
   int code = http.POST(body);
   Serial.printf("[post] %d\n", code);
 
-  // Apply relay states from the response
   if (code == 200) {
     String resp = http.getString();
     DynamicJsonDocument r(2048);
@@ -341,7 +384,6 @@ void collectAndPost() {
         bool on = rel["on"] | false;
         int pin = parsePin(pinStr);
         if (pin >= 0) {
-          // ensure it's an output (config refresh normally handles this)
           pinMode(pin, OUTPUT);
           digitalWrite(pin, on ? HIGH : LOW);
         }
@@ -366,7 +408,7 @@ void setup() {
     startConfigPortal(true);
     loadConfig();
   } else {
-    startConfigPortal(false); // autoConnect
+    startConfigPortal(false);
   }
 
   refreshConfig();
@@ -376,7 +418,6 @@ void setup() {
 void loop() {
   updateLed();
 
-  // Long-press BOOT (~3 s) -> reopen portal at runtime
   static unsigned long pressStart = 0;
   if (digitalRead(PORTAL_BUTTON_PIN) == LOW) {
     if (pressStart == 0) pressStart = millis();
@@ -390,7 +431,6 @@ void loop() {
     pressStart = 0;
   }
 
-  // Track WiFi state for the LED
   if (WiFi.status() != WL_CONNECTED && ledState == LED_ONLINE) setLed(LED_ERROR);
   if (WiFi.status() == WL_CONNECTED && ledState == LED_ERROR)  setLed(LED_ONLINE);
 
