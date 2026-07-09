@@ -506,7 +506,7 @@ export function SensorHistoryDialog({
                     stroke="color-mix(in oklab, currentColor 12%, transparent)"
                   />
                   <XAxis dataKey="t" tick={{ fontSize: 11 }} minTickGap={24} />
-                  <YAxis tick={{ fontSize: 11 }} width={40} />
+                  <YAxis tick={{ fontSize: 11 }} width={40} domain={yDomain} allowDataOverflow />
                   <Tooltip
                     contentStyle={{
                       fontSize: 12,
