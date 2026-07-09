@@ -47,7 +47,17 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarIcon,
+  Download,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type Range = "day" | "week" | "month" | "year";
