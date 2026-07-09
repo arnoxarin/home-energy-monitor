@@ -464,6 +464,34 @@ bool refreshConfig() {
 // Retry refreshConfig() with exponential backoff. Delays double each attempt
 // starting at 1s, capped at 30s (1, 2, 4, 8, 16, 30, 30, ...). Non-blocking
 // updates to the status LED continue via updateLed() during the wait.
+// Returns true if the BOOT button has been held LOW continuously for >= 3s.
+// Safe to call from anywhere; keeps its own static press-start timestamp.
+bool checkPortalButtonHold() {
+  static unsigned long pressStart = 0;
+  if (digitalRead(PORTAL_BUTTON_PIN) == LOW) {
+    if (pressStart == 0) pressStart = millis();
+    if (millis() - pressStart > 3000) {
+      pressStart = 0;
+      return true;
+    }
+  } else {
+    pressStart = 0;
+  }
+  return false;
+}
+
+// Interruptible delay that keeps polling the BOOT button and the LED.
+// Returns true if the user held BOOT long enough to request the portal.
+bool interruptibleDelay(unsigned long ms) {
+  unsigned long start = millis();
+  while (millis() - start < ms) {
+    updateLed();
+    if (checkPortalButtonHold()) return true;
+    delay(20);
+  }
+  return false;
+}
+
 bool refreshConfigWithBackoff(int maxAttempts, const char* reason) {
   Serial.printf("[config] retry loop start (%s), up to %d attempts\n", reason, maxAttempts);
   unsigned long delayMs = 1000;
@@ -474,13 +502,20 @@ bool refreshConfigWithBackoff(int maxAttempts, const char* reason) {
       setLed(LED_ONLINE);
       return true;
     }
+    if (checkPortalButtonHold()) {
+      Serial.println("[config] BOOT held during retry — opening portal");
+      startConfigPortal(true);
+      loadConfig();
+      return false;
+    }
     if (attempt == maxAttempts) break;
     Serial.printf("[config] retry in %lu ms\n", delayMs);
     setLed(LED_ERROR);
-    unsigned long start = millis();
-    while (millis() - start < delayMs) {
-      updateLed();
-      delay(20);
+    if (interruptibleDelay(delayMs)) {
+      Serial.println("[config] BOOT held during backoff — opening portal");
+      startConfigPortal(true);
+      loadConfig();
+      return false;
     }
     delayMs = min<unsigned long>(delayMs * 2, 30000);
   }
