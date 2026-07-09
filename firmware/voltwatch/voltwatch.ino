@@ -33,6 +33,13 @@
 #include <Preferences.h>
 #include <DHT.h>
 
+// ---------- Firmware identity ----------
+// Bump FW_VERSION whenever behavior changes (LED logic, protocol, sensors).
+// FW_BUILD is baked in at compile time so the dashboard can tell two builds
+// of the same version apart.
+#define FW_VERSION "1.1.0"
+#define FW_BUILD   (__DATE__ " " __TIME__)
+
 // ---------- Persistent config ----------
 Preferences prefs;
 String cfgIngest;     // .../api/public/ingest
