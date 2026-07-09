@@ -132,13 +132,46 @@ export function FirmwareDialog() {
         <DialogHeader>
           <DialogTitle>Install ESP32 firmware</DialogTitle>
           <DialogDescription>
-            Flash once. WiFi, endpoint and ingest key are then configured from the ESP's own
-            captive portal — no re-flashing to change them. The onboard LED shows status:
-            fast blink = portal open, slow blink = connecting, solid = online.
+            The ingest URL and device key are baked into the firmware for the device you
+            pick below, so the ESP32's setup portal only asks for WiFi — no URL or key to
+            type. Onboard LED: fast blink = portal open, slow blink = connecting, solid = online.
           </DialogDescription>
         </DialogHeader>
 
         <FirmwareBuildStatus />
+
+        {/* ---------- Device picker: which device is this firmware for? ---------- */}
+        <div className="rounded-lg border p-3 space-y-2">
+          <label className="text-sm font-medium">Flash firmware for device</label>
+          {devices.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No devices yet. Add a device on the Devices page first, then come back — the
+              firmware will be pre-configured for it automatically.
+            </p>
+          ) : (
+            <>
+              <Select value={deviceId} onValueChange={setDeviceId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a device" />
+                </SelectTrigger>
+                <SelectContent>
+                  {devices.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selected && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  Ingest URL &amp; key for "{selected.name}" are baked in — WiFi-only setup portal.
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
 
         {/* ---------- One-click browser flasher ---------- */}
         <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
