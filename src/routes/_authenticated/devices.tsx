@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
 import { LastSeenBadge } from "@/components/LastSeenBadge";
+import { VerifyDeviceDialog } from "@/components/VerifyDeviceDialog";
 
 export const Route = createFileRoute("/_authenticated/devices")({
   component: DevicesPage,
@@ -221,6 +222,7 @@ function DeviceRow({ device, origin }: { device: Device; origin: string }) {
           )}
         </div>
         <div className="flex gap-1">
+          <VerifyDeviceDialog deviceId={device.id} ingestKey={device.ingest_key} origin={origin} />
           <Link to="/devices/$deviceId/register" params={{ deviceId: device.id }}>
             <Button variant="outline" size="sm"><Link2 className="mr-1 h-3.5 w-3.5" /> Register</Button>
           </Link>
