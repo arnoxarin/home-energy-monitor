@@ -44,9 +44,9 @@
 // when you download the .ino for a specific device. When placeholders
 // remain (values starting with "__"), the captive portal prompts for
 // them, and a pairing code can be used instead of typing them by hand.
-#define DEFAULT_INGEST_URL "https://c8ab56ed-ab9f-4b4a-b700-c695543bf1e4.lovableproject.com/api/public/ingest"
-#define DEFAULT_INGEST_KEY "73867fd574b52124d8b832d3afcd97ee4b703b0c017f654e"
-#define DEFAULT_CLAIM_URL  "__CLAIM_URL__"
+#define DEFAULT_INGEST_URL "https://project--c8ab56ed-ab9f-4b4a-b700-c695543bf1e4-dev.lovable.app/api/public/ingest"
+#define DEFAULT_INGEST_KEY "__INGEST_KEY__"
+#define DEFAULT_CLAIM_URL  "https://project--c8ab56ed-ab9f-4b4a-b700-c695543bf1e4-dev.lovable.app/api/public/claim"
 
 static bool isPlaceholder(const String& s) {
   return s.length() == 0 || s.startsWith("__");
