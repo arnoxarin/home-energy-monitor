@@ -65,6 +65,30 @@ String cfgIngest;     // .../api/public/ingest
 String cfgKey;        // device ingest key
 String cfgConfigUrl;  // derived: .../api/public/config
 String cfgClaimUrl;   // .../api/public/claim  (pairing endpoint)
+String cfgHostname;   // WiFi hostname (shown in router device list)
+
+// Build a sensible default hostname like "voltwatch-a1b2" from the MAC.
+String defaultHostname() {
+  uint64_t mac = ESP.getEfuseMac();
+  char buf[24];
+  snprintf(buf, sizeof(buf), "voltwatch-%04x", (uint16_t)(mac & 0xFFFF));
+  return String(buf);
+}
+
+// Sanitise a user-typed hostname to RFC-952/1123-safe chars.
+String sanitiseHostname(const String& in) {
+  String out;
+  for (size_t i = 0; i < in.length() && out.length() < 31; i++) {
+    char c = in[i];
+    if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
+    if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') out += c;
+    else if (c == ' ' || c == '_' || c == '.') out += '-';
+  }
+  while (out.length() && out[0] == '-') out.remove(0, 1);
+  while (out.length() && out[out.length() - 1] == '-') out.remove(out.length() - 1);
+  if (out.length() == 0) out = defaultHostname();
+  return out;
+}
 
 
 const char* AP_NAME = "Voltwatch-Setup";
