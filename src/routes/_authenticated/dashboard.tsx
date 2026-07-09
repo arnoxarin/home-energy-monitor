@@ -165,6 +165,43 @@ function Dashboard() {
     },
   });
 
+  // Batch-load recent readings for every graphable sensor in ONE query and
+  // prime the per-sensor cache entries. This eliminates the N+1 waterfall
+  // where each SensorCard fired its own request on mount.
+  const graphableIds = useMemo(
+    () => (sensorsQ.data ?? []).filter((s) => s.view !== "button").map((s) => s.id).sort().join(","),
+    [sensorsQ.data],
+  );
+  useQuery({
+    queryKey: ["readings-batch", graphableIds],
+    enabled: graphableIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const ids = graphableIds.split(",").filter(Boolean);
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("sensor_readings")
+        .select("id, sensor_id, ts, payload")
+        .in("sensor_id", ids)
+        .order("ts", { ascending: false })
+        .limit(100 * ids.length);
+      if (error) throw error;
+      const rows = (data ?? []) as Reading[];
+      // Group by sensor_id and prime each per-sensor cache.
+      const grouped = new Map<string, Reading[]>();
+      for (const r of rows) {
+        const arr = grouped.get(r.sensor_id) ?? [];
+        arr.push(r);
+        grouped.set(r.sensor_id, arr);
+      }
+      for (const id of ids) {
+        const list = (grouped.get(id) ?? []).slice(0, 100).reverse();
+        qc.setQueryData<Reading[]>(["readings", id], list);
+      }
+      return rows;
+    },
+  });
+
   // Realtime — append new readings straight into the cache for instant graph updates
   useEffect(() => {
     const ch = supabase
