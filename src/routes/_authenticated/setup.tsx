@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Cpu, Wifi, Settings2, RefreshCw } from "lucide-react";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
+import { WifiConfigCard } from "@/components/WifiConfigCard";
 
 export const Route = createFileRoute("/_authenticated/setup")({
   component: SetupPage,
@@ -38,6 +39,8 @@ function SetupPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-8 space-y-6">
+        <WifiConfigCard />
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">

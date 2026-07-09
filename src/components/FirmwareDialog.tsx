@@ -26,6 +26,7 @@ import "esp-web-tools";
 import { FirmwareBuildStatus } from "./FirmwareBuildStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { readWifiConfig } from "./WifiConfigCard";
 
 // Let TypeScript know about the custom element from esp-web-tools (React 19)
 declare module "react" {
@@ -78,9 +79,15 @@ export function FirmwareDialog() {
     const origin = window.location.origin;
     const ingestUrl = `${origin}/api/public/ingest`;
     const key = selected?.ingest_key ?? "";
+    const wifi = readWifiConfig();
+    // Escape for a C string literal (backslashes and double quotes only —
+    // SSIDs/passwords can't contain newlines).
+    const cEscape = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     return firmwareSource
       .replaceAll("__INGEST_URL__", ingestUrl)
-      .replaceAll("__INGEST_KEY__", key);
+      .replaceAll("__INGEST_KEY__", key)
+      .replaceAll("__WIFI_SSID__", wifi ? cEscape(wifi.ssid) : "__WIFI_SSID__")
+      .replaceAll("__WIFI_PASS__", wifi ? cEscape(wifi.pass) : "__WIFI_PASS__");
   }, [selected]);
 
   // Check whether the compiled .bin is actually deployed

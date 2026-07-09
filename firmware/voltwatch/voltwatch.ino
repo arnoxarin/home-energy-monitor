@@ -49,6 +49,11 @@
 // building manually; the portal will ask for them at first boot.
 #define DEFAULT_INGEST_URL "__INGEST_URL__"
 #define DEFAULT_INGEST_KEY "__INGEST_KEY__"
+// Optional WiFi credentials baked in from the app's Setup page. When these
+// are non-placeholder, the ESP tries them first and skips the captive portal
+// on a successful connect. If they fail, the portal opens as usual.
+#define DEFAULT_WIFI_SSID  "__WIFI_SSID__"
+#define DEFAULT_WIFI_PASS  "__WIFI_PASS__"
 
 static bool isPlaceholder(const String& s) {
   return s.length() == 0 || s.startsWith("__") ;
@@ -189,6 +194,34 @@ void startConfigPortal(bool onDemand) {
   setLed(LED_PORTAL);
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
   wm.setSaveConfigCallback([]() { setLed(LED_CONNECTING); });
+
+  // If the app baked WiFi credentials into this firmware, try them first
+  // so the user doesn't need to open the captive portal at all.
+  String bakedSsid = String(DEFAULT_WIFI_SSID);
+  String bakedPass = String(DEFAULT_WIFI_PASS);
+  if (!onDemand && !isPlaceholder(bakedSsid) && WiFi.SSID().length() == 0) {
+    Serial.printf("[wifi] trying baked SSID \"%s\"\n", bakedSsid.c_str());
+    setLed(LED_CONNECTING);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(bakedSsid.c_str(), isPlaceholder(bakedPass) ? "" : bakedPass.c_str());
+    unsigned long t0 = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) {
+      updateLed();
+      delay(100);
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("[wifi] baked creds worked, skipping portal");
+      setLed(LED_ONLINE);
+      if (needEndpoint) cfgIngest = String(DEFAULT_INGEST_URL);
+      if (needKey)      cfgKey    = String(DEFAULT_INGEST_KEY);
+      prefs.begin("voltwatch", false);
+      prefs.putString("ingest", cfgIngest);
+      prefs.putString("key",    cfgKey);
+      prefs.end();
+      return;
+    }
+    Serial.println("[wifi] baked creds failed, falling back to portal");
+  }
 
   bool ok = onDemand ? wm.startConfigPortal(AP_NAME, AP_PASS)
                      : wm.autoConnect(AP_NAME, AP_PASS);
