@@ -184,16 +184,24 @@ void startConfigPortal(bool onDemand) {
   // Pairing code (6 digits from the dashboard) — offered whenever we know
   // a claim endpoint (either baked in, or derivable from the ingest URL).
   WiFiManagerParameter pCode("paircode", "Pairing code (6 digits, optional)", "", 8);
+  WiFiManagerParameter pHost("hostname", "Device hostname (shown in router, e.g. voltwatch-kitchen)",
+                             cfgHostname.c_str(), 32);
   bool offerCode = haveClaim || needEndpoint;
 
   if (needEndpoint) wm.addParameter(&pEndpoint);
   if (needKey)      wm.addParameter(&pKey);
   if (offerCode)    wm.addParameter(&pCode);
+  wm.addParameter(&pHost);
   wm.setConfigPortalTimeout(300);
 
   setLed(LED_PORTAL);
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
   wm.setSaveConfigCallback([]() { setLed(LED_CONNECTING); });
+
+  // Apply hostname BEFORE connecting so the router registers the correct name.
+  if (cfgHostname.length() > 0) {
+    WiFi.setHostname(cfgHostname.c_str());
+  }
 
   bool ok = onDemand ? wm.startConfigPortal(AP_NAME, AP_PASS)
                      : wm.autoConnect(AP_NAME, AP_PASS);
@@ -201,9 +209,16 @@ void startConfigPortal(bool onDemand) {
 
   if (needEndpoint) cfgIngest = pEndpoint.getValue();
   if (needKey)      cfgKey    = pKey.getValue();
+  String newHost = sanitizeHostname(String(pHost.getValue()));
+  if (newHost.length() > 0 && newHost != cfgHostname) {
+    cfgHostname = newHost;
+    WiFi.setHostname(cfgHostname.c_str());
+    Serial.printf("[cfg] hostname set to '%s'\n", cfgHostname.c_str());
+  }
   prefs.begin("voltwatch", false);
-  prefs.putString("ingest", cfgIngest);
-  prefs.putString("key",    cfgKey);
+  prefs.putString("ingest",   cfgIngest);
+  prefs.putString("key",      cfgKey);
+  prefs.putString("hostname", cfgHostname);
   prefs.end();
   Serial.println("[cfg] saved");
 
