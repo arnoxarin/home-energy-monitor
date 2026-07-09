@@ -503,9 +503,13 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
+          <h2 className="text-xl font-semibold flex flex-wrap items-center gap-2">
             <DeviceStatusDot lastSeenAt={device.last_seen_at} />
             {device.name}
+            <TelemetryStatus
+              sensorIds={sensors.map((s) => s.id)}
+              lastSeenAt={device.last_seen_at}
+            />
             <FirmwareBadge
               version={device.fw_version}
               build={device.fw_build}
@@ -516,6 +520,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
           <p className="text-xs text-muted-foreground">
             {device.last_seen_at ? `Last seen ${new Date(device.last_seen_at).toLocaleString()}` : "Never seen"}
           </p>
+
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowKey((v) => !v)}>
