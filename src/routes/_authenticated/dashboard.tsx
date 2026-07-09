@@ -204,10 +204,6 @@ function Dashboard() {
             <span className="text-lg font-semibold">Voltwatch</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/devices">
-
-              <Button variant="outline" size="sm">Devices</Button>
-            </Link>
             <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
             <FirmwareDialog />
             <PairDeviceDialog />
