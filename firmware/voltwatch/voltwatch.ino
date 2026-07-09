@@ -228,8 +228,12 @@ void startConfigPortal(bool onDemand) {
   code.trim();
   if (offerCode && code.length() == 6 && cfgKey.length() == 0) {
     Serial.println("[cfg] attempting pairing claim");
-    if (claimWithCode(code)) Serial.println("[cfg] paired ok");
-    else                     Serial.println("[cfg] pairing failed");
+    if (claimWithCode(code)) {
+      Serial.println("[cfg] paired ok, fetching config with backoff");
+      refreshConfigWithBackoff(7, "post-claim");
+    } else {
+      Serial.println("[cfg] pairing failed");
+    }
   }
   setLed(LED_ONLINE);
 }
@@ -306,8 +310,10 @@ bool claimWithCode(const String& code) {
 }
 
 // ---------- Config fetch: rebuild sensor table ----------
-void refreshConfig() {
-  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return;
+// Returns true when a JSON config was fetched and parsed (even if the sensor
+// list is empty — a valid empty config still counts as "server reachable").
+bool refreshConfig() {
+  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return false;
 
   HTTPClient http;
   Serial.printf("[config] GET %s\n", cfgConfigUrl.c_str());
@@ -322,7 +328,7 @@ void refreshConfig() {
   if (code != 200) {
     Serial.printf("[config] err body: %s\n", body.c_str());
     http.end();
-    return;
+    return false;
   }
   http.end();
 
@@ -336,7 +342,7 @@ void refreshConfig() {
     Serial.println("[config] your ingest URL host isn't serving the API route.");
     Serial.println("[config] use https://project--<project-id>.lovable.app/api/public/config");
     Serial.println("[config] (or the -dev.lovable.app variant for preview).");
-    return;
+    return false;
   }
 
   DynamicJsonDocument doc(8192);
@@ -344,8 +350,10 @@ void refreshConfig() {
   if (err) {
     Serial.printf("[config] parse err: %s\n", err.c_str());
     Serial.printf("[config] first 300 chars: %s\n", body.substring(0, 300).c_str());
-    return;
+    return false;
   }
+
+
 
 
   tearDownSensors();
@@ -379,7 +387,39 @@ void refreshConfig() {
     sensorCount++;
   }
   Serial.printf("[config] %d sensor(s) loaded\n", sensorCount);
+  return true;
 }
+
+// Retry refreshConfig() with exponential backoff. Delays double each attempt
+// starting at 1s, capped at 30s (1, 2, 4, 8, 16, 30, 30, ...). Non-blocking
+// updates to the status LED continue via updateLed() during the wait.
+bool refreshConfigWithBackoff(int maxAttempts, const char* reason) {
+  Serial.printf("[config] retry loop start (%s), up to %d attempts\n", reason, maxAttempts);
+  unsigned long delayMs = 1000;
+  for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+    Serial.printf("[config] attempt %d/%d\n", attempt, maxAttempts);
+    if (refreshConfig()) {
+      Serial.printf("[config] recovered on attempt %d\n", attempt);
+      setLed(LED_ONLINE);
+      return true;
+    }
+    if (attempt == maxAttempts) break;
+    Serial.printf("[config] retry in %lu ms\n", delayMs);
+    setLed(LED_ERROR);
+    unsigned long start = millis();
+    while (millis() - start < delayMs) {
+      updateLed();
+      delay(20);
+    }
+    delayMs = min<unsigned long>(delayMs * 2, 30000);
+  }
+  Serial.println("[config] FINAL FAILURE: could not load config after retries.");
+  Serial.println("[config] check: WiFi, ingest URL host, ingest key, and that the device is paired.");
+  Serial.println("[config] the ESP will keep retrying on its normal 15s schedule.");
+  setLed(LED_ERROR);
+  return false;
+}
+
 
 // ---------- Reading loop ----------
 long readUltrasonicCm(int trig, int echo) {
@@ -487,8 +527,11 @@ void setup() {
     startConfigPortal(false);
   }
 
-  refreshConfig();
-  setLed(WiFi.status() == WL_CONNECTED ? LED_ONLINE : LED_ERROR);
+  if (WiFi.status() == WL_CONNECTED) {
+    refreshConfigWithBackoff(7, "boot");
+  } else {
+    setLed(LED_ERROR);
+  }
 }
 
 void loop() {
@@ -500,7 +543,7 @@ void loop() {
     else if (millis() - pressStart > 3000) {
       startConfigPortal(true);
       loadConfig();
-      refreshConfig();
+      refreshConfigWithBackoff(7, "portal-reopen");
       pressStart = 0;
     }
   } else {
