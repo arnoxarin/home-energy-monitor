@@ -237,9 +237,8 @@ function NewSensorPage() {
 
       <main className="mx-auto max-w-6xl px-6 py-10 md:px-12 md:py-12">
         <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-12">
-          {/* Left: configuration form */}
-          <div className="space-y-10 md:col-span-7">
-
+          {/* Left: sensor type + live preview */}
+          <div className="space-y-8 md:col-span-5">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Add new sensor</h1>
               <p className="mt-1 text-sm text-[#7A8794]">
@@ -258,7 +257,7 @@ function NewSensorPage() {
               <RadioGroup
                 value={kind}
                 onValueChange={(v) => setKind(v as SensorKind)}
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+                className="grid grid-cols-2 gap-3"
               >
                 {kinds.map((k) => {
                   const m = KIND_META[k];
@@ -290,6 +289,70 @@ function NewSensorPage() {
               </RadioGroup>
             </section>
 
+            {/* Live preview */}
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1A222B] shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7A8794]"
+                  style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                >
+                  Live tile preview
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      isMocked ? "bg-[#7A8794]" : "bg-[#22D3EE] animate-pulse"
+                    }`}
+                  />
+                  <span
+                    className={`text-[10px] font-medium tracking-widest ${
+                      isMocked ? "text-[#7A8794]" : "text-[#22D3EE]"
+                    }`}
+                    style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+                  >
+                    {isMocked ? "SIMULATED" : "STREAMING"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center bg-gradient-to-b from-transparent to-[#22D3EE]/5 p-6">
+                <div className="w-[220px]">
+                  <TilePreview
+                    name={name.trim() || meta.label}
+                    pin={primaryPin}
+                    kindLabel={meta.label}
+                    Icon={meta.icon}
+                    view={view}
+                    unit={unit.trim()}
+                    readings={previewReadings}
+                    isMocked={isMocked}
+                  />
+                </div>
+              </div>
+
+              <div
+                className="flex items-center justify-between border-t border-white/5 bg-black/20 px-4 py-2.5 text-[10px] text-[#7A8794]"
+                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
+              >
+                <span>KIND: {kind.toUpperCase()}</span>
+                <span>PIN: {primaryPin ? `GPIO ${primaryPin}` : "—"}</span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-[#22D3EE]/20 bg-[#22D3EE]/5 p-4">
+              <p className="text-[11px] leading-relaxed text-[#22D3EE]/80">
+                <span className="font-bold">Tip:</span>{" "}
+                {previewQ.isFetching
+                  ? "Checking for existing readings on this pin…"
+                  : isMocked
+                    ? "Preview shows simulated values. Real readings appear as soon as your device posts data."
+                    : "Preview is streaming live readings from a previous sensor on this pin."}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: hardware config + display + actions */}
+          <div className="space-y-10 md:col-span-7">
             {/* 02. Hardware config */}
             <section className="space-y-5">
               <h2
@@ -507,70 +570,8 @@ function NewSensorPage() {
               </button>
             </div>
           </div>
-
-          {/* Right: docked live preview */}
-          <div className="md:sticky md:top-12 md:col-span-5">
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1A222B] shadow-2xl">
-              <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
-                <span
-                  className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7A8794]"
-                  style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
-                >
-                  Live tile preview
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      isMocked ? "bg-[#7A8794]" : "bg-[#22D3EE] animate-pulse"
-                    }`}
-                  />
-                  <span
-                    className={`text-[10px] font-medium tracking-widest ${
-                      isMocked ? "text-[#7A8794]" : "text-[#22D3EE]"
-                    }`}
-                    style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
-                  >
-                    {isMocked ? "SIMULATED" : "STREAMING"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center bg-gradient-to-b from-transparent to-[#22D3EE]/5 p-8">
-                <div className="w-[240px]">
-                  <TilePreview
-                    name={name.trim() || meta.label}
-                    pin={primaryPin}
-                    kindLabel={meta.label}
-                    Icon={meta.icon}
-                    view={view}
-                    unit={unit.trim()}
-                    readings={previewReadings}
-                    isMocked={isMocked}
-                  />
-                </div>
-              </div>
-
-              <div
-                className="flex items-center justify-between border-t border-white/5 bg-black/20 px-4 py-2.5 text-[10px] text-[#7A8794]"
-                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
-              >
-                <span>KIND: {kind.toUpperCase()}</span>
-                <span>PIN: {primaryPin ? `GPIO ${primaryPin}` : "—"}</span>
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-lg border border-[#22D3EE]/20 bg-[#22D3EE]/5 p-4">
-              <p className="text-[11px] leading-relaxed text-[#22D3EE]/80">
-                <span className="font-bold">Tip:</span>{" "}
-                {previewQ.isFetching
-                  ? "Checking for existing readings on this pin…"
-                  : isMocked
-                    ? "Preview shows simulated values. Real readings appear as soon as your device posts data."
-                    : "Preview is streaming live readings from a previous sensor on this pin."}
-              </p>
-            </div>
-          </div>
         </div>
+
       </main>
     </div>
   );
