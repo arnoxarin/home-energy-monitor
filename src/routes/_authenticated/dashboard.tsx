@@ -34,6 +34,8 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -580,13 +582,15 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
-        <SortableSensorGrid
-          storageKey={`sensor-layout:${device.id}`}
-          sensors={sensors}
-          compact={compact}
-          editing={editing}
-        />
-
+        <>
+          <SensorGraphPanel sensors={sensors} />
+          <SortableSensorGrid
+            storageKey={`sensor-layout:${device.id}`}
+            sensors={sensors}
+            compact={compact}
+            editing={editing}
+          />
+        </>
       )}
 
 
@@ -1175,3 +1179,161 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
   );
 }
 
+
+// ---- Dynamic graph panel: pick any graphable sensor and see its live history ----
+function SensorGraphPanel({ sensors }: { sensors: Sensor[] }) {
+  const graphable = useMemo(
+    () => sensors.filter((s) => s.view !== "button"),
+    [sensors],
+  );
+  const [sensorId, setSensorId] = useState<string | null>(null);
+  const active = useMemo(() => {
+    if (!graphable.length) return null;
+    return graphable.find((s) => s.id === sensorId) ?? graphable[0];
+  }, [graphable, sensorId]);
+
+  const readingsQ = useQuery({
+    queryKey: ["panel-readings", active?.id],
+    enabled: Boolean(active),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sensor_readings")
+        .select("id, sensor_id, ts, payload")
+        .eq("sensor_id", active!.id)
+        .order("ts", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return (data as Reading[]).reverse();
+    },
+    staleTime: 30_000,
+    refetchInterval: 15_000,
+  });
+
+  const readings = readingsQ.data ?? [];
+  const latest = readings[readings.length - 1];
+  const fields = latest ? Object.keys(latest.payload) : [];
+  const defaultField = active && latest ? pickPrimaryField(active.kind, latest.payload) : "value";
+  const [fieldSel, setFieldSel] = useState<string | null>(null);
+  const field = fieldSel && fields.includes(fieldSel) ? fieldSel : defaultField;
+
+  const chartData = readings.map((r, i) => ({
+    t: r.ts
+      ? new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : String(i),
+    v: Number(r.payload?.[field] ?? 0),
+  }));
+
+  const values = chartData.map((d) => d.v);
+  const min = values.length ? Math.min(...values) : 0;
+  const max = values.length ? Math.max(...values) : 1;
+  const unit = active?.unit ?? "";
+
+  if (!graphable.length) return null;
+
+  return (
+    <Card className="glass-tile">
+      <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <CardTitle className="text-base">Live graph</CardTitle>
+          <CardDescription className="text-xs">
+            {active
+              ? `${active.name} · last ${readings.length || 0} readings`
+              : "Pick a sensor to view its data"}
+          </CardDescription>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={active?.id ?? ""}
+            onValueChange={(v) => {
+              setSensorId(v);
+              setFieldSel(null);
+            }}
+          >
+            <SelectTrigger className="h-8 w-[200px] text-xs">
+              <SelectValue placeholder="Choose sensor" />
+            </SelectTrigger>
+            <SelectContent>
+              {graphable.map((s) => (
+                <SelectItem key={s.id} value={s.id} className="text-xs">
+                  {s.name}
+                  <span className="ml-1 text-muted-foreground">
+                    · {KIND_META[s.kind].label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {fields.length > 1 && (
+            <Select value={field} onValueChange={setFieldSel}>
+              <SelectTrigger className="h-8 w-[140px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fields.map((f) => (
+                  <SelectItem key={f} value={f} className="text-xs">
+                    {f}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="mb-3 flex flex-wrap gap-4 text-xs tile-muted">
+          <span>latest <span className="font-semibold text-foreground">{values.at(-1)?.toFixed(2) ?? "—"}{unit && ` ${unit}`}</span></span>
+          <span>min <span className="font-semibold text-foreground">{values.length ? min.toFixed(2) : "—"}</span></span>
+          <span>max <span className="font-semibold text-foreground">{values.length ? max.toFixed(2) : "—"}</span></span>
+        </div>
+        <div className="relative h-[260px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={chartData.length ? chartData : [{ t: "", v: 0 }, { t: " ", v: 0 }]}
+              margin={{ top: 8, right: 12, left: -12, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="panelFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+              <XAxis dataKey="t" tick={{ fontSize: 11 }} minTickGap={24} />
+              <YAxis tick={{ fontSize: 11 }} width={40} />
+              {chartData.length > 0 && (
+                <Tooltip
+                  cursor={{ stroke: "var(--color-primary)", strokeWidth: 1, strokeDasharray: "4 4", opacity: 0.7 }}
+                  wrapperStyle={{ outline: "none" }}
+                  contentStyle={{
+                    background: "var(--color-card)",
+                    border: "1px solid var(--tile-border)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  labelStyle={{ color: "var(--muted-foreground)" }}
+                />
+              )}
+              {chartData.length > 0 && (
+                <Area
+                  type="monotone"
+                  dataKey="v"
+                  stroke="var(--color-primary)"
+                  strokeWidth={2}
+                  fill="url(#panelFill)"
+                  isAnimationActive={false}
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+          {!chartData.length && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <span className="rounded-full border bg-background/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+                No readings yet
+              </span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
