@@ -508,13 +508,29 @@ export function SensorHistoryDialog({
                   <XAxis dataKey="t" tick={{ fontSize: 11 }} minTickGap={24} />
                   <YAxis tick={{ fontSize: 11 }} width={40} domain={yDomain} allowDataOverflow />
                   <Tooltip
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 8,
-                      backdropFilter: "blur(8px)",
-                      background: "color-mix(in oklab, var(--color-card) 85%, transparent)",
+                    cursor={{
+                      stroke: "var(--color-primary)",
+                      strokeWidth: 1,
+                      strokeDasharray: "4 4",
+                      opacity: 0.7,
                     }}
-                    formatter={(value: number) => [fmt(value), activeField]}
+                    wrapperStyle={{ outline: "none" }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || payload.length === 0) return null;
+                      const p = payload[0].payload as { t: string; avg: number; min: number; max: number };
+                      return (
+                        <div className="rounded-lg border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur">
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+                          <p className="mt-0.5 text-sm font-semibold text-foreground">
+                            {fmt(p.avg)}
+                            <span className="ml-1 text-[10px] font-normal text-muted-foreground">{activeField}</span>
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-muted-foreground">
+                            min {fmt(p.min)} · max {fmt(p.max)}
+                          </p>
+                        </div>
+                      );
+                    }}
                   />
                   <Area
                     type="monotone"
@@ -522,9 +538,16 @@ export function SensorHistoryDialog({
                     stroke="var(--color-primary)"
                     strokeWidth={2}
                     fill="url(#histFill)"
+                    activeDot={{
+                      r: 5,
+                      stroke: "var(--color-card)",
+                      strokeWidth: 2,
+                      fill: "var(--color-primary)",
+                    }}
                     animationDuration={550}
                     animationEasing="ease-in-out"
                   />
+
                 </AreaChart>
               </ResponsiveContainer>
             </div>
