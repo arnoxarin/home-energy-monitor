@@ -41,6 +41,7 @@ import {
 } from "recharts";
 import {
   Activity,
+  AlertTriangle,
   Copy,
   LogOut,
   Plus,
