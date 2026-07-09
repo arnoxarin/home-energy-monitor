@@ -42,6 +42,7 @@ String cfgConfigUrl;  // derived: .../api/public/config
 const char* AP_NAME = "Voltwatch-Setup";
 const char* AP_PASS = "voltwatch";
 const int   PORTAL_BUTTON_PIN = 0;
+const int   STATUS_LED_PIN    = 2;   // onboard LED on most ESP32 dev boards
 
 const unsigned long POST_INTERVAL_MS   = 5000;   // send readings every 5 s
 const unsigned long CONFIG_INTERVAL_MS = 15000;  // refresh sensor list every 15 s
@@ -49,6 +50,48 @@ const int MAX_SENSORS = 12;
 
 unsigned long lastPost = 0;
 unsigned long lastConfig = 0;
+
+// ---------- Status LED ----------
+// States:
+//   PORTAL     -> fast blink   (150 ms) : captive portal is up, waiting for you
+//   CONNECTING -> slow blink   (600 ms) : trying to join saved WiFi
+//   ONLINE     -> solid on               : connected and posting
+//   ERROR      -> double-blink pattern  : lost WiFi mid-run
+enum LedState { LED_PORTAL, LED_CONNECTING, LED_ONLINE, LED_ERROR };
+LedState ledState = LED_CONNECTING;
+
+void setLed(LedState s) { ledState = s; }
+
+void updateLed() {
+  static unsigned long lastToggle = 0;
+  static bool on = false;
+  static int pulseIdx = 0;
+  unsigned long now = millis();
+
+  auto blink = [&](unsigned long period) {
+    if (now - lastToggle >= period) {
+      lastToggle = now;
+      on = !on;
+      digitalWrite(STATUS_LED_PIN, on ? HIGH : LOW);
+    }
+  };
+
+  switch (ledState) {
+    case LED_PORTAL:     blink(150); break;
+    case LED_CONNECTING: blink(600); break;
+    case LED_ONLINE:     digitalWrite(STATUS_LED_PIN, HIGH); break;
+    case LED_ERROR: {
+      // pattern: on 100, off 100, on 100, off 700
+      const unsigned long steps[] = {100, 100, 100, 700};
+      if (now - lastToggle >= steps[pulseIdx]) {
+        lastToggle = now;
+        pulseIdx = (pulseIdx + 1) % 4;
+        digitalWrite(STATUS_LED_PIN, (pulseIdx % 2 == 0) ? HIGH : LOW);
+      }
+      break;
+    }
+  }
+}
 
 // ---------- Dynamic sensor table ----------
 struct Sensor {
@@ -105,6 +148,11 @@ void startConfigPortal(bool onDemand) {
   wm.addParameter(&pKey);
   wm.setConfigPortalTimeout(300);
 
+  // Blink LED fast while the portal is up so the user knows to connect
+  setLed(LED_PORTAL);
+  wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
+  wm.setSaveConfigCallback([]() { setLed(LED_CONNECTING); });
+
   bool ok = onDemand ? wm.startConfigPortal(AP_NAME, AP_PASS)
                      : wm.autoConnect(AP_NAME, AP_PASS);
   if (!ok) { Serial.println("[cfg] portal timed out"); ESP.restart(); }
@@ -116,6 +164,7 @@ void startConfigPortal(bool onDemand) {
   prefs.putString("key",    cfgKey);
   prefs.end();
   Serial.println("[cfg] saved");
+  setLed(LED_ONLINE);
 }
 
 void loadConfig() {
@@ -255,6 +304,8 @@ void setup() {
   Serial.begin(115200);
   delay(200);
   pinMode(PORTAL_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  setLed(LED_CONNECTING);
 
   loadConfig();
 
@@ -267,9 +318,12 @@ void setup() {
   }
 
   refreshConfig();
+  setLed(WiFi.status() == WL_CONNECTED ? LED_ONLINE : LED_ERROR);
 }
 
 void loop() {
+  updateLed();
+
   // Long-press BOOT (~3 s) -> reopen portal at runtime
   static unsigned long pressStart = 0;
   if (digitalRead(PORTAL_BUTTON_PIN) == LOW) {
@@ -283,6 +337,10 @@ void loop() {
   } else {
     pressStart = 0;
   }
+
+  // Track WiFi state for the LED
+  if (WiFi.status() != WL_CONNECTED && ledState == LED_ONLINE) setLed(LED_ERROR);
+  if (WiFi.status() == WL_CONNECTED && ledState == LED_ERROR)  setLed(LED_ONLINE);
 
   if (millis() - lastConfig >= CONFIG_INTERVAL_MS) {
     lastConfig = millis();
