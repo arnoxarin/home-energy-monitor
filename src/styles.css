@@ -148,11 +148,7 @@
   position: relative;
   overflow: hidden;
   border-radius: 1.25rem;
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-card) 70%, transparent) 0%,
-    color-mix(in oklab, var(--color-card) 45%, transparent) 100%
-  );
+  background: color-mix(in oklab, var(--color-card) 60%, transparent);
   border: 1px solid color-mix(in oklab, var(--color-foreground) 10%, transparent);
   backdrop-filter: blur(22px) saturate(160%);
   box-shadow:
