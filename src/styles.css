@@ -233,48 +233,43 @@
   position: relative;
   overflow: hidden;
   border-radius: 1.25rem;
-  background: var(--color-card);
-  border: 1px solid color-mix(in oklab, var(--color-foreground) 10%, transparent);
-  box-shadow: 0 8px 20px -14px color-mix(in oklab, black 40%, transparent);
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  background: var(--tile-bg);
+  border: 1px solid var(--tile-border);
+  box-shadow: var(--tile-shadow);
+  transition: transform 200ms ease, box-shadow 200ms ease,
+    background-color 300ms ease, border-color 300ms ease;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px -14px color-mix(in oklab, black 50%, transparent);
+    box-shadow: var(--tile-shadow-hover);
   }
 }
 
 @utility glass-tile-on {
-  background: #10b981;
-  color: #ffffff;
-  border-color: color-mix(in oklab, #10b981 60%, transparent);
+  background: var(--tile-on-bg);
+  color: var(--tile-on-fg);
+  border-color: var(--tile-on-border);
 }
-
 
 /* Small inner glass surface reused inside tiles (sub-values, switch bay) */
 @utility glass-chip {
   position: relative;
   border-radius: 0.625rem;
-  background: color-mix(in oklab, var(--color-card) 55%, transparent);
-  border: 1px solid color-mix(in oklab, var(--color-foreground) 8%, transparent);
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
   backdrop-filter: blur(14px) saturate(150%);
-  box-shadow:
-    0 1px 0 0 color-mix(in oklab, white 45%, transparent) inset,
-    0 6px 14px -10px color-mix(in oklab, var(--color-foreground) 25%, transparent);
+  box-shadow: var(--chip-shadow);
 }
 
 /* Subtle glass frame for the tile grid */
 @utility glass-frame {
   border-radius: 1.5rem;
   padding: 0.75rem;
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--color-card) 40%, transparent),
-    color-mix(in oklab, var(--color-primary) 6%, transparent)
-  );
-  border: 1px solid color-mix(in oklab, var(--color-foreground) 6%, transparent);
+  background: linear-gradient(135deg, var(--frame-bg-start), var(--frame-bg-end));
+  border: 1px solid var(--frame-border);
   backdrop-filter: blur(12px) saturate(140%);
 }
+
 
 
 
