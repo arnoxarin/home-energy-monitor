@@ -244,6 +244,93 @@ export function SensorHistoryDialog({
           )}
         </div>
 
+        {/* Date navigator: prev / date picker / next / today */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setAnchor((a) => stepAnchor(range, a, -1))}
+            aria-label={`Previous ${range}`}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn("h-8 min-w-[180px] justify-start gap-2 font-normal")}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span className="truncate">{windowLabel(range, anchor)}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={anchor}
+                onSelect={(d) => {
+                  if (d) {
+                    setAnchor(d);
+                    setPickerOpen(false);
+                  }
+                }}
+                disabled={(d) => isAfter(d, new Date())}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setAnchor((a) => stepAnchor(range, a, 1))}
+            disabled={!canGoForward}
+            aria-label={`Next ${range}`}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8"
+            onClick={() => setAnchor(new Date())}
+            disabled={isSameDay(anchor, new Date())}
+          >
+            Today
+          </Button>
+
+          {/* Quick month jumps for month/year ranges */}
+          {(range === "month" || range === "year") && (
+            <div className="ml-auto flex gap-1">
+              {[-3, -2, -1, 0].map((offset) => {
+                const d = range === "month" ? addMonths(new Date(), offset) : addYears(new Date(), offset);
+                const label = range === "month" ? format(d, "MMM") : format(d, "yyyy");
+                const active =
+                  range === "month"
+                    ? format(d, "yyyy-MM") === format(anchor, "yyyy-MM")
+                    : format(d, "yyyy") === format(anchor, "yyyy");
+                return (
+                  <Badge
+                    key={offset}
+                    variant={active ? "default" : "outline"}
+                    className="cursor-pointer transition-all hover:scale-105"
+                    onClick={() => setAnchor(d)}
+                  >
+                    {label}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+
         {/* Stat strip — values transition individually, container never remounts */}
         {stats && (
           <div className="grid grid-cols-2 gap-2 transition-opacity duration-300 sm:grid-cols-4"
