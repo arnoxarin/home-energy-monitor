@@ -16,6 +16,7 @@ import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ApiPublicStateRouteImport } from './routes/api/public/state'
 import { Route as ApiPublicIngestRouteImport } from './routes/api/public/ingest'
+import { Route as ApiPublicConfigRouteImport } from './routes/api/public/config'
 import { Route as AuthenticatedSensorsNewRouteImport } from './routes/_authenticated/sensors.new'
 import { Route as AuthenticatedSensorsSensorIdEditRouteImport } from './routes/_authenticated/sensors.$sensorId.edit'
 
@@ -53,6 +54,11 @@ const ApiPublicIngestRoute = ApiPublicIngestRouteImport.update({
   path: '/api/public/ingest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicConfigRoute = ApiPublicConfigRouteImport.update({
+  id: '/api/public/config',
+  path: '/api/public/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSensorsNewRoute = AuthenticatedSensorsNewRouteImport.update({
   id: '/sensors/new',
   path: '/sensors/new',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/devices': typeof AuthenticatedDevicesRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
+  '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
   '/api/public/state': typeof ApiPublicStateRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/devices': typeof AuthenticatedDevicesRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
+  '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
   '/api/public/state': typeof ApiPublicStateRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRoute
   '/_authenticated/sensors/new': typeof AuthenticatedSensorsNewRoute
+  '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
   '/api/public/state': typeof ApiPublicStateRoute
   '/_authenticated/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/devices'
     | '/sensors/new'
+    | '/api/public/config'
     | '/api/public/ingest'
     | '/api/public/state'
     | '/sensors/$sensorId/edit'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/devices'
     | '/sensors/new'
+    | '/api/public/config'
     | '/api/public/ingest'
     | '/api/public/state'
     | '/sensors/$sensorId/edit'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/devices'
     | '/_authenticated/sensors/new'
+    | '/api/public/config'
     | '/api/public/ingest'
     | '/api/public/state'
     | '/_authenticated/sensors/$sensorId/edit'
@@ -135,6 +147,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicConfigRoute: typeof ApiPublicConfigRoute
   ApiPublicIngestRoute: typeof ApiPublicIngestRoute
   ApiPublicStateRoute: typeof ApiPublicStateRoute
 }
@@ -190,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIngestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/config': {
+      id: '/api/public/config'
+      path: '/api/public/config'
+      fullPath: '/api/public/config'
+      preLoaderRoute: typeof ApiPublicConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/sensors/new': {
       id: '/_authenticated/sensors/new'
       path: '/sensors/new'
@@ -228,6 +248,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicConfigRoute: ApiPublicConfigRoute,
   ApiPublicIngestRoute: ApiPublicIngestRoute,
   ApiPublicStateRoute: ApiPublicStateRoute,
 }
