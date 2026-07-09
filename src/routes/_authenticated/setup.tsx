@@ -39,6 +39,8 @@ function SetupPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-8 space-y-6">
+        <WifiConfigCard />
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
