@@ -1042,6 +1042,7 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
   const latest = readings[readings.length - 1];
   const field = useMemo(() => (latest ? pickPrimaryField(sensor.kind, latest.payload) : "value"), [latest, sensor.kind]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const activeField = selected ?? field;
   const availableFields = latest ? Object.keys(latest.payload) : [];
 
@@ -1050,68 +1051,103 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
     v: Number(r.payload?.[activeField] ?? 0),
   }));
 
+  // Tapping the graph area opens the history dialog with date-range switching.
+  const openHistory = (e: React.MouseEvent) => {
+    // Don't open when a field badge is clicked
+    if ((e.target as HTMLElement).closest("[data-graph-badge]")) return;
+    setHistoryOpen(true);
+  };
+
   if (!latest) {
     const flat = Array.from({ length: 10 }, (_, i) => ({ t: String(i), v: 0 }));
     return (
-      <div className="flex h-full flex-col">
-        <p className="truncate text-2xl font-bold leading-tight text-muted-foreground/60">
-          0.00
-          {sensor.unit ? <span className="ml-1 text-xs font-normal">{sensor.unit}</span> : null}
-        </p>
-        <div className="mt-1 flex-1 min-h-0 opacity-50">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={flat} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
-              <XAxis dataKey="t" hide />
-              <YAxis domain={[0, 1]} tick={{ fontSize: 9 }} width={28} />
-              <Line type="monotone" dataKey="v" stroke="currentColor" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-            </LineChart>
-          </ResponsiveContainer>
+      <>
+        <div
+          className="flex h-full flex-col cursor-pointer transition-transform hover:scale-[1.01]"
+          onClick={openHistory}
+          role="button"
+          aria-label="Open reading history"
+        >
+          <p className="truncate text-2xl font-bold leading-tight text-muted-foreground/60">
+            0.00
+            {sensor.unit ? <span className="ml-1 text-xs font-normal">{sensor.unit}</span> : null}
+          </p>
+          <div className="mt-1 flex-1 min-h-0 opacity-50">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={flat} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+                <XAxis dataKey="t" hide />
+                <YAxis domain={[0, 1]} tick={{ fontSize: 9 }} width={28} />
+                <Line type="monotone" dataKey="v" stroke="currentColor" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground text-center">Tap to view history</p>
         </div>
-        <p className="mt-1 text-[10px] text-muted-foreground text-center">Waiting for data…</p>
-      </div>
+        <SensorHistoryDialog
+          sensor={sensor}
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          initialField={activeField}
+        />
+      </>
     );
   }
 
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-2xl font-bold leading-tight">
-            {typeof latest.payload[activeField] === "number"
-              ? (latest.payload[activeField] as number).toFixed(2)
-              : "—"}
-            {sensor.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span> : null}
-          </p>
-          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{activeField}</p>
-        </div>
-        {availableFields.length > 1 && (
-          <div className="flex flex-wrap justify-end gap-1 max-w-[55%]">
-            {availableFields.slice(0, 4).map((f) => (
-              <Badge
-                key={f}
-                variant={f === activeField ? "default" : "outline"}
-                className="cursor-pointer px-1.5 py-0 text-[9px] backdrop-blur-md"
-                onClick={() => setSelected(f)}
-              >
-                {f}
-              </Badge>
-            ))}
+    <>
+      <div
+        className="flex h-full flex-col cursor-pointer transition-transform hover:scale-[1.01]"
+        onClick={openHistory}
+        role="button"
+        aria-label="Open reading history"
+      >
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-2xl font-bold leading-tight">
+              {typeof latest.payload[activeField] === "number"
+                ? (latest.payload[activeField] as number).toFixed(2)
+                : "—"}
+              {sensor.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span> : null}
+            </p>
+            <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{activeField}</p>
           </div>
-        )}
+          {availableFields.length > 1 && (
+            <div className="flex flex-wrap justify-end gap-1 max-w-[55%]">
+              {availableFields.slice(0, 4).map((f) => (
+                <Badge
+                  key={f}
+                  data-graph-badge
+                  variant={f === activeField ? "default" : "outline"}
+                  className="cursor-pointer px-1.5 py-0 text-[9px] backdrop-blur-md"
+                  onClick={(e) => { e.stopPropagation(); setSelected(f); }}
+                >
+                  {f}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="mt-1 flex-1 min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
+              <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
+              <YAxis tick={{ fontSize: 9 }} width={28} />
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
+              <Line type="monotone" dataKey="v" stroke="var(--color-primary)" dot={false} strokeWidth={2} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
-      <div className="mt-1 flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="color-mix(in oklab, currentColor 12%, transparent)" />
-            <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
-            <YAxis tick={{ fontSize: 9 }} width={28} />
-            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
-            <Line type="monotone" dataKey="v" stroke="var(--color-primary)" dot={false} strokeWidth={2} isAnimationActive={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+      <SensorHistoryDialog
+        sensor={sensor}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        initialField={activeField}
+      />
+    </>
   );
 }
+
