@@ -216,8 +216,9 @@ export function FirmwareDialog() {
           )}
           <p className="text-[11px] text-muted-foreground">
             After flashing, join WiFi <code>Voltwatch-Setup</code> (pw <code>voltwatch</code>)
-            on your phone and paste your ingest URL + device key from the Devices page.
+            on your phone and enter your home WiFi. That's it — ingest URL and key are already baked in.
           </p>
+
         </div>
 
         {/* ---------- Manual Arduino path ---------- */}
