@@ -62,6 +62,8 @@ import { FirmwareDialog } from "@/components/FirmwareDialog";
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
 import { LastSeenBadge } from "@/components/LastSeenBadge";
+import { TelemetryStatus } from "@/components/TelemetryStatus";
+import { recordReading } from "@/lib/telemetry-pulse";
 import { SensorHistoryDialog } from "@/components/SensorHistoryDialog";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
