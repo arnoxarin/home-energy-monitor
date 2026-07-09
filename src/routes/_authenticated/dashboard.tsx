@@ -59,6 +59,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
+import { PairDeviceDialog } from "@/components/PairDeviceDialog";
+
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
 import { LastSeenBadge } from "@/components/LastSeenBadge";
