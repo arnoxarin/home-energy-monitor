@@ -378,6 +378,8 @@ void collectAndPost() {
   serializeJson(doc, body);
 
   HTTPClient http;
+  Serial.printf("[post] POST %s (%d readings, %d bytes)\n",
+                cfgIngest.c_str(), (int)readings.size(), body.length());
   http.begin(cfgIngest);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
@@ -385,12 +387,17 @@ void collectAndPost() {
   http.addHeader("x-fw-version", FW_VERSION);
   http.addHeader("x-fw-build", FW_BUILD);
   int code = http.POST(body);
-  Serial.printf("[post] %d\n", code);
+  String resp = http.getString();
+  Serial.printf("[post] status %d, %d bytes resp\n", code, resp.length());
 
   if (code == 200) {
-    String resp = http.getString();
     DynamicJsonDocument r(2048);
-    if (!deserializeJson(r, resp)) {
+    DeserializationError perr = deserializeJson(r, resp);
+    if (perr) {
+      Serial.printf("[post] resp parse err: %s\n", perr.c_str());
+      Serial.printf("[post] raw: %s\n", resp.c_str());
+    } else {
+      int relayCount = 0;
       for (JsonObject rel : r["relays"].as<JsonArray>()) {
         const char* pinStr = rel["pin"] | "";
         bool on = rel["on"] | false;
@@ -398,9 +405,13 @@ void collectAndPost() {
         if (pin >= 0) {
           pinMode(pin, OUTPUT);
           digitalWrite(pin, on ? HIGH : LOW);
+          relayCount++;
         }
       }
+      if (relayCount > 0) Serial.printf("[post] applied %d relay state(s)\n", relayCount);
     }
+  } else {
+    Serial.printf("[post] err body: %s\n", resp.c_str());
   }
   http.end();
 }
