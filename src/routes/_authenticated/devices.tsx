@@ -35,6 +35,7 @@ import {
 import { Activity, ArrowLeft, Copy, Eye, EyeOff, KeyRound, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
+import { FirmwareBadge } from "@/components/FirmwareBadge";
 
 export const Route = createFileRoute("/_authenticated/devices")({
   component: DevicesPage,
@@ -202,6 +203,11 @@ function DeviceRow({ device, origin }: { device: Device; origin: string }) {
               <CardTitle className="text-lg flex items-center gap-2">
                 <DeviceStatusDot lastSeenAt={device.last_seen_at} />
                 {device.name}
+                <FirmwareBadge
+                  version={device.fw_version}
+                  build={device.fw_build}
+                  reportedAt={device.fw_reported_at}
+                />
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(true)}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
