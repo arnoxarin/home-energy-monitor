@@ -60,6 +60,7 @@ import {
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
 import { PairDeviceDialog } from "@/components/PairDeviceDialog";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
