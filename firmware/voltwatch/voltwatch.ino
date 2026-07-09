@@ -241,7 +241,7 @@ void refreshConfig() {
       if (*p) out.pin = parsePin(p);
     }
 
-    applySensor(out);
+    applySensor(sensorCount);
     sensorCount++;
   }
   Serial.printf("[config] %d sensor(s) loaded\n", sensorCount);
