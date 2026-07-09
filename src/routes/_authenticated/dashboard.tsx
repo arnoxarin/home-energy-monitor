@@ -847,7 +847,7 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
 
   return (
     <div
-      className={`glass-tile group aspect-square flex flex-col p-2 text-xs ${on ? "glass-tile-on" : ""} ${
+      className={`glass-tile group h-full w-full flex flex-col p-2 text-xs ${on ? "glass-tile-on" : ""} ${
         alert ? "ring-2 ring-destructive/70 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]" : ""
       }`}
     >
