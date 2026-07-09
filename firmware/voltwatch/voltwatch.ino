@@ -302,6 +302,18 @@ void loadConfig() {
   if (cfgIngest.length() == 0 && !isPlaceholder(defUrl)) cfgIngest = defUrl;
   if (cfgKey.length()    == 0 && !isPlaceholder(defKey)) cfgKey    = defKey;
 
+  // Auto-migrate: the ".lovableproject.com" host serves the SPA HTML, not
+  // the API routes. If a previous flash saved that host, rewrite to the
+  // stable project host that serves /api/public/* and persist the fix.
+  if (cfgIngest.indexOf("lovableproject.com") >= 0 && !isPlaceholder(defUrl)) {
+    Serial.printf("[cfg] migrating stored ingest URL '%s' -> '%s'\n",
+                  cfgIngest.c_str(), defUrl.c_str());
+    cfgIngest = defUrl;
+    prefs.begin("voltwatch", false);
+    prefs.putString("ingest", cfgIngest);
+    prefs.end();
+  }
+
   cfgConfigUrl = cfgIngest;
   int slash = cfgConfigUrl.lastIndexOf('/');
   if (slash > 0) cfgConfigUrl = cfgConfigUrl.substring(0, slash) + "/config";
