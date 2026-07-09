@@ -192,6 +192,8 @@ void refreshConfig() {
   HTTPClient http;
   http.begin(cfgConfigUrl);
   http.addHeader("x-ingest-key", cfgKey);
+  http.addHeader("x-fw-version", FW_VERSION);
+  http.addHeader("x-fw-build", FW_BUILD);
   int code = http.GET();
   if (code != 200) { Serial.printf("[config] %d\n", code); http.end(); return; }
 
@@ -283,6 +285,8 @@ void collectAndPost() {
   http.begin(cfgIngest);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-ingest-key", cfgKey);
+  http.addHeader("x-fw-version", FW_VERSION);
+  http.addHeader("x-fw-build", FW_BUILD);
   int code = http.POST(body);
   Serial.printf("[post] %d\n", code);
 
