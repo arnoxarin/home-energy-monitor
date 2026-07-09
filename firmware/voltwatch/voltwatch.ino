@@ -458,6 +458,13 @@ void setup() {
 
   loadConfig();
 
+  // Set hostname before any WiFi connect so the router registers the right name.
+  WiFi.mode(WIFI_STA);
+  if (cfgHostname.length() > 0) {
+    WiFi.setHostname(cfgHostname.c_str());
+    Serial.printf("[cfg] hostname '%s'\n", cfgHostname.c_str());
+  }
+
   if (digitalRead(PORTAL_BUTTON_PIN) == LOW) {
     Serial.println("[cfg] BOOT held — opening portal");
     startConfigPortal(true);
