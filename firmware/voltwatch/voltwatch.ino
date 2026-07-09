@@ -643,17 +643,11 @@ void setup() {
 void loop() {
   updateLed();
 
-  static unsigned long pressStart = 0;
-  if (digitalRead(PORTAL_BUTTON_PIN) == LOW) {
-    if (pressStart == 0) pressStart = millis();
-    else if (millis() - pressStart > 3000) {
-      startConfigPortal(true);
-      loadConfig();
-      refreshConfigWithBackoff(7, "portal-reopen");
-      pressStart = 0;
-    }
-  } else {
-    pressStart = 0;
+  if (checkPortalButtonHold()) {
+    Serial.println("[cfg] BOOT held — opening portal");
+    startConfigPortal(true);
+    loadConfig();
+    refreshConfigWithBackoff(7, "portal-reopen");
   }
 
   if (WiFi.status() != WL_CONNECTED && ledState == LED_ONLINE) setLed(LED_ERROR);
