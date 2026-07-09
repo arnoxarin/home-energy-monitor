@@ -30,7 +30,11 @@ interface SensorRow {
   pin: string | null;
   view: SensorView;
   unit: string | null;
-  state: { on?: boolean; pins?: Record<string, string> } | null;
+  state: {
+    on?: boolean;
+    pins?: Record<string, string>;
+    alerts?: { field?: string | null; min?: number | null; max?: number | null };
+  } | null;
 }
 interface Device { id: string; name: string; }
 
@@ -84,6 +88,9 @@ function EditSensorPage() {
   const [pins, setPins] = useState<Partial<Record<PinRoleKey, string>>>({});
   const [view, setView] = useState<SensorView>("graph");
   const [unit, setUnit] = useState<string>("");
+  const [alertField, setAlertField] = useState<string>("");
+  const [alertMin, setAlertMin] = useState<string>("");
+  const [alertMax, setAlertMax] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loaded, setLoaded] = useState(false);
 
@@ -94,6 +101,10 @@ function EditSensorPage() {
     setPins((sensor.state?.pins ?? {}) as Partial<Record<PinRoleKey, string>>);
     setView(sensor.view);
     setUnit(sensor.unit ?? "");
+    const a = sensor.state?.alerts;
+    setAlertField(a?.field ?? "");
+    setAlertMin(a?.min == null ? "" : String(a.min));
+    setAlertMax(a?.max == null ? "" : String(a.max));
     setLoaded(true);
   }, [sensor, loaded]);
 
@@ -153,7 +164,18 @@ function EditSensorPage() {
       setErrors({});
 
       const primaryPin = pins[roles[0].key]!;
-      const nextState = { ...(sensor.state ?? {}), pins } as Record<string, string | boolean | Record<string, string>>;
+      const parsedMin = alertMin.trim() === "" ? null : Number(alertMin);
+      const parsedMax = alertMax.trim() === "" ? null : Number(alertMax);
+      if (parsedMin != null && Number.isNaN(parsedMin)) { setErrors({ alertMin: "Must be a number" }); throw new Error("Fix alert min"); }
+      if (parsedMax != null && Number.isNaN(parsedMax)) { setErrors({ alertMax: "Must be a number" }); throw new Error("Fix alert max"); }
+      if (parsedMin != null && parsedMax != null && parsedMin > parsedMax) {
+        setErrors({ alertMax: "Max must be ≥ min" }); throw new Error("Fix alert range");
+      }
+      const alerts =
+        parsedMin == null && parsedMax == null && !alertField.trim()
+          ? undefined
+          : { field: alertField.trim() || null, min: parsedMin, max: parsedMax };
+      const nextState = { ...(sensor.state ?? {}), pins, alerts };
       const { error } = await supabase
         .from("sensors")
         .update({
@@ -284,6 +306,50 @@ function EditSensorPage() {
                     <Input value={unit} onChange={(e) => setUnit(e.target.value)} maxLength={16} />
                   </div>
                 </div>
+
+                {sensor.kind !== "relay" && (
+                  <div className="space-y-3 rounded-lg border bg-background p-4">
+                    <div>
+                      <p className="text-sm font-semibold">Threshold alerts</p>
+                      <p className="text-xs text-muted-foreground">
+                        Warn on the dashboard when readings fall outside the range. Leave a field empty to disable that bound.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1.5">
+                        <Label>Field (optional)</Label>
+                        <Input
+                          value={alertField}
+                          onChange={(e) => setAlertField(e.target.value)}
+                          placeholder="auto (primary)"
+                          maxLength={32}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Low threshold</Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={alertMin}
+                          onChange={(e) => setAlertMin(e.target.value)}
+                          placeholder="e.g. 200"
+                        />
+                        {errors.alertMin && <p className="text-xs text-destructive">{errors.alertMin}</p>}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>High threshold</Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={alertMax}
+                          onChange={(e) => setAlertMax(e.target.value)}
+                          placeholder="e.g. 250"
+                        />
+                        {errors.alertMax && <p className="text-xs text-destructive">{errors.alertMax}</p>}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
