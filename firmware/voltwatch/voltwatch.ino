@@ -58,6 +58,22 @@ String cfgIngest;     // .../api/public/ingest
 String cfgKey;        // device ingest key
 String cfgConfigUrl;  // derived: .../api/public/config
 String cfgClaimUrl;   // .../api/public/claim  (pairing endpoint)
+String cfgHostname;   // WiFi hostname shown in router (e.g. "voltwatch-kitchen")
+
+// Sanitize a user-entered hostname to RFC 952/1123-ish: lowercase letters,
+// digits, and '-'; max 32 chars; no leading/trailing '-'.
+String sanitizeHostname(const String& in) {
+  String out;
+  for (size_t i = 0; i < in.length() && out.length() < 32; i++) {
+    char c = in[i];
+    if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
+    if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') out += c;
+    else if (c == ' ' || c == '_') out += '-';
+  }
+  while (out.length() && out[0] == '-') out.remove(0, 1);
+  while (out.length() && out[out.length() - 1] == '-') out.remove(out.length() - 1, 1);
+  return out;
+}
 
 const char* AP_NAME = "Voltwatch-Setup";
 const char* AP_PASS = "voltwatch";
