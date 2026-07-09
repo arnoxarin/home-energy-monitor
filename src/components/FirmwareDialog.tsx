@@ -16,8 +16,8 @@ import firmwareSource from "../../firmware/voltwatch/voltwatch.ino?raw";
 // Registers the <esp-web-install-button> custom element in the browser.
 import "esp-web-tools";
 
-// Let TypeScript know about the custom element from esp-web-tools
-declare global {
+// Let TypeScript know about the custom element from esp-web-tools (React 19)
+declare module "react" {
   namespace JSX {
     interface IntrinsicElements {
       "esp-web-install-button": React.DetailedHTMLProps<
