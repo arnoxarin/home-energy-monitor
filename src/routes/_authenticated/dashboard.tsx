@@ -683,7 +683,7 @@ function SortableSensorGrid({
   compact: boolean;
   editing: boolean;
 }) {
-  const cols = compact ? 12 : 8;
+  const cols = compact ? 12 : 7;
   const defaultSize = (view: SensorView) => {
     if (compact) {
       return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 3, h: 3 } : { w: 4, h: 3 };
