@@ -144,10 +144,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div key={pathname} className="page-transition">
-        <Outlet />
-      </div>
-      <Toaster richColors position="top-right" />
+      <ThemeProvider>
+        <div key={pathname} className="page-transition">
+          <Outlet />
+        </div>
+        <Toaster richColors position="top-right" />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
