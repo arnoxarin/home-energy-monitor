@@ -484,10 +484,15 @@ export function SensorHistoryDialog({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading history…
             </div>
           ) : (
-            <div className="h-full w-full transition-opacity duration-300"
+            <div className="relative h-full w-full transition-opacity duration-300"
                  style={{ opacity: isFetching ? 0.75 : 1 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={bucketed} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                <AreaChart
+                  data={bucketed.length === 0
+                    ? [{ t: "", avg: 0, min: 0, max: 0 }, { t: " ", avg: 0, min: 0, max: 0 }]
+                    : bucketed}
+                  margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+                >
                   <defs>
                     <linearGradient id="histFill" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.45} />
@@ -499,50 +504,65 @@ export function SensorHistoryDialog({
                     stroke="var(--chart-grid)"
                   />
                   <XAxis dataKey="t" tick={{ fontSize: 11 }} minTickGap={24} />
-                  <YAxis tick={{ fontSize: 11 }} width={40} domain={yDomain} allowDataOverflow />
-                  <Tooltip
-                    cursor={{
-                      stroke: "var(--color-primary)",
-                      strokeWidth: 1,
-                      strokeDasharray: "4 4",
-                      opacity: 0.7,
-                    }}
-                    wrapperStyle={{ outline: "none" }}
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload || payload.length === 0) return null;
-                      const p = payload[0].payload as { t: string; avg: number; min: number; max: number };
-                      return (
-                        <div className="rounded-lg border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur">
-                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-                          <p className="mt-0.5 text-sm font-semibold text-foreground">
-                            {fmt(p.avg)}
-                            <span className="ml-1 text-[10px] font-normal text-muted-foreground">{activeField}</span>
-                          </p>
-                          <p className="mt-0.5 text-[10px] text-muted-foreground">
-                            min {fmt(p.min)} · max {fmt(p.max)}
-                          </p>
-                        </div>
-                      );
-                    }}
+                  <YAxis
+                    tick={{ fontSize: 11 }}
+                    width={40}
+                    domain={bucketed.length === 0 ? [0, 1] : yDomain}
+                    allowDataOverflow
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="avg"
-                    stroke="var(--color-primary)"
-                    strokeWidth={2}
-                    fill="url(#histFill)"
-                    activeDot={{
-                      r: 5,
-                      stroke: "var(--color-card)",
-                      strokeWidth: 2,
-                      fill: "var(--color-primary)",
-                    }}
-                    animationDuration={550}
-                    animationEasing="ease-in-out"
-                  />
-
+                  {bucketed.length > 0 && (
+                    <Tooltip
+                      cursor={{
+                        stroke: "var(--color-primary)",
+                        strokeWidth: 1,
+                        strokeDasharray: "4 4",
+                        opacity: 0.7,
+                      }}
+                      wrapperStyle={{ outline: "none" }}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || payload.length === 0) return null;
+                        const p = payload[0].payload as { t: string; avg: number; min: number; max: number };
+                        return (
+                          <div className="rounded-lg border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur">
+                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+                            <p className="mt-0.5 text-sm font-semibold text-foreground">
+                              {fmt(p.avg)}
+                              <span className="ml-1 text-[10px] font-normal text-muted-foreground">{activeField}</span>
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-muted-foreground">
+                              min {fmt(p.min)} · max {fmt(p.max)}
+                            </p>
+                          </div>
+                        );
+                      }}
+                    />
+                  )}
+                  {bucketed.length > 0 && (
+                    <Area
+                      type="monotone"
+                      dataKey="avg"
+                      stroke="var(--color-primary)"
+                      strokeWidth={2}
+                      fill="url(#histFill)"
+                      activeDot={{
+                        r: 5,
+                        stroke: "var(--color-card)",
+                        strokeWidth: 2,
+                        fill: "var(--color-primary)",
+                      }}
+                      animationDuration={550}
+                      animationEasing="ease-in-out"
+                    />
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
+              {bucketed.length === 0 && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <span className="rounded-full border bg-background/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+                    No readings in this range
+                  </span>
+                </div>
+              )}
             </div>
           )}
           {isFetching && bucketed.length > 0 && (
