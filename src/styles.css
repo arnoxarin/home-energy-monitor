@@ -113,6 +113,8 @@
   --chart-grid: color-mix(in oklab, var(--foreground) 12%, transparent);
   --chart-line: var(--primary);
   --chart-line-muted: var(--foreground);
+  --tile-muted-fg: var(--muted-foreground);
+  --tile-on-muted-fg: color-mix(in oklab, var(--tile-on-fg) 80%, transparent);
 }
 
 .dark {
@@ -166,6 +168,9 @@
   --chart-grid: color-mix(in oklab, var(--foreground) 18%, transparent);
   --chart-line: var(--primary);
   --chart-line-muted: var(--foreground);
+  /* Brighter secondary text on tiles in dark mode */
+  --tile-muted-fg: oklch(0.94 0.01 256);
+  --tile-on-muted-fg: oklch(0.98 0.02 160);
 }
 
 @layer base {
@@ -269,6 +274,16 @@
   border: 1px solid var(--frame-border);
   backdrop-filter: blur(12px) saturate(140%);
 }
+
+/* Secondary/status text inside tiles — brighter in dark mode */
+@utility tile-muted {
+  color: var(--tile-muted-fg);
+}
+@utility tile-on-muted {
+  color: var(--tile-on-muted-fg);
+}
+
+
 
 
 

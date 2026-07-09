@@ -892,13 +892,13 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
             <p className="truncate text-sm font-semibold leading-tight">
               {sensor.name}
               {sensor.pin ? (
-                <span className={`ml-1 font-normal ${on ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                <span className={`ml-1 font-normal ${on ? "tile-on-muted" : "tile-muted"}`}>
                   [{sensor.pin}]
                 </span>
               ) : null}
             </p>
             {!isButton && (
-              <p className={`truncate text-[10px] uppercase tracking-wide ${on ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+              <p className={`truncate text-[10px] uppercase tracking-wide ${on ? "tile-on-muted" : "tile-muted"}`}>
                 {KIND_META[sensor.kind].label}
               </p>
             )}
@@ -970,7 +970,7 @@ function RelayControl({ sensor }: { sensor: Sensor }) {
   });
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3">
-      <p className={`text-xs uppercase tracking-[0.2em] ${on ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+      <p className={`text-xs uppercase tracking-[0.2em] ${on ? "tile-on-muted" : "tile-muted"}`}>
         {on ? "On" : "Off"}
       </p>
       <div className="glass-chip px-4 py-2">
