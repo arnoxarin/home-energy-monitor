@@ -175,21 +175,34 @@ void applySensor(int i) {
 }
 
 // ---------- WiFi + captive portal ----------
+// Forward decl: attempts to redeem a 6-digit pairing code against the
+// server, returning true when it successfully learned an ingest URL + key.
+bool claimWithCode(const String& code);
+
 void startConfigPortal(bool onDemand) {
   WiFiManager wm;
 
   // Only expose endpoint/key fields when they aren't already baked into
   // this firmware build. When the dashboard personalized the .ino, the
   // portal is WiFi-only.
-  bool needEndpoint = isPlaceholder(String(DEFAULT_INGEST_URL));
-  bool needKey      = isPlaceholder(String(DEFAULT_INGEST_KEY));
+  bool haveEndpoint = !isPlaceholder(String(DEFAULT_INGEST_URL));
+  bool haveKey      = !isPlaceholder(String(DEFAULT_INGEST_KEY));
+  bool haveClaim    = !isPlaceholder(String(DEFAULT_CLAIM_URL));
+  bool needEndpoint = !haveEndpoint;
+  bool needKey      = !haveKey;
 
   WiFiManagerParameter pEndpoint("endpoint", "Ingest URL (https://.../api/public/ingest)",
                                  cfgIngest.c_str(), 200);
   WiFiManagerParameter pKey("key", "Device ingest key",
                             cfgKey.c_str(), 80);
+  // Pairing code (6 digits from the dashboard). Always offered when the
+  // firmware knows how to reach a claim endpoint — either baked in, or
+  // once the user has typed an ingest URL (from which we derive it).
+  WiFiManagerParameter pCode("paircode", "Pairing code (6 digits, optional)", "", 8);
+  bool offerCode = haveClaim || needEndpoint; // if no ingest baked in, user can pair after entering URL
   if (needEndpoint) wm.addParameter(&pEndpoint);
   if (needKey)      wm.addParameter(&pKey);
+  if (offerCode)    wm.addParameter(&pCode);
   wm.setConfigPortalTimeout(300);
 
   // Blink LED fast while the portal is up so the user knows to connect
@@ -209,8 +222,22 @@ void startConfigPortal(bool onDemand) {
   prefs.putString("key",    cfgKey);
   prefs.end();
   Serial.println("[cfg] saved");
+
+  // If a pairing code was entered (and we still lack an ingest key), redeem
+  // it now that WiFi is up. On success this also persists ingest URL/key.
+  String code = String(pCode.getValue());
+  code.trim();
+  if (offerCode && code.length() == 6 && cfgKey.length() == 0) {
+    Serial.println("[cfg] attempting pairing claim");
+    if (claimWithCode(code)) {
+      Serial.println("[cfg] paired ok");
+    } else {
+      Serial.println("[cfg] pairing failed");
+    }
+  }
   setLed(LED_ONLINE);
 }
+
 
 void loadConfig() {
   prefs.begin("voltwatch", true);
