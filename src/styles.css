@@ -237,3 +237,56 @@
 }
 
 
+
+/* ---------- Motion system: snappier, GPU-friendly overlay animations ---------- */
+:root {
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-quint: cubic-bezier(0.64, 0, 0.78, 0);
+  --dur-fast: 140ms;
+  --dur-base: 180ms;
+  --dur-slow: 240ms;
+}
+
+/* Tailwindcss-animate / tw-animate-css defaults tuned for snappier feel */
+.animate-in {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out-quint);
+  will-change: transform, opacity;
+}
+.animate-out {
+  animation-duration: var(--dur-fast);
+  animation-timing-function: var(--ease-in-quint);
+  will-change: transform, opacity;
+}
+
+/* Radix overlays (dialog, popover, dropdown, sheet, select) use data-state */
+[data-state="open"],
+[data-state="closed"] {
+  animation-fill-mode: both;
+}
+
+/* Route / page transition */
+@keyframes page-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.page-transition {
+  animation: page-in var(--dur-base) var(--ease-out-quint) both;
+  will-change: transform, opacity;
+}
+
+/* Tone down heavy backdrop-filters to reduce paint cost */
+@supports (backdrop-filter: blur(1px)) {
+  .glass-chip { backdrop-filter: blur(8px) saturate(140%); }
+  .glass-frame { backdrop-filter: blur(8px) saturate(130%); }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in, .animate-out, .page-transition,
+  [data-state="open"], [data-state="closed"] {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}
