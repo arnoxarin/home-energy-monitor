@@ -349,6 +349,49 @@ export function FirmwareDialog() {
                 </>
               )}
 
+              {step === "pair" && (
+                <section className="space-y-4">
+                  <h3
+                    className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-900"
+                    style={{ fontFamily: HEADING_FONT }}
+                  >
+                    Pair a freshly-flashed ESP32
+                  </h3>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    Skip creating the device first — flash the generic firmware,
+                    then join the ESP32's <code>Voltwatch-Setup</code> WiFi on
+                    your phone and enter a 6-digit pairing code alongside your
+                    home WiFi. The ESP will register itself into your account
+                    and appear on the dashboard automatically.
+                  </p>
+                  <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-600">
+                    <li>Flash the firmware (any device selection is fine — the ESP will overwrite it during pairing).</li>
+                    <li>Click <span className="font-semibold text-slate-900">Get pairing code</span> below.</li>
+                    <li>On your phone, join WiFi <code>Voltwatch-Setup</code> (pw <code>voltwatch</code>).</li>
+                    <li>In the captive portal, enter your home WiFi + the code, then Save.</li>
+                    <li>Watch this window — the device appears once claim succeeds.</li>
+                  </ol>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <PairDeviceDialog
+                      trigger={
+                        <Button
+                          size="sm"
+                          className="bg-[#3b82f6] hover:bg-[#2563eb] text-white"
+                        >
+                          <PlugZap className="mr-1 h-4 w-4" /> Get pairing code
+                        </Button>
+                      }
+                    />
+                  </div>
+                  <p className="text-[11px] text-[#94a3b8] leading-relaxed">
+                    Pairing codes expire after 10 minutes. Generate a fresh one if
+                    the ESP wasn't ready in time.
+                  </p>
+                </section>
+              )}
+
+
+
               {step === "advanced" && (
                 <section className="space-y-4">
                   <h3
