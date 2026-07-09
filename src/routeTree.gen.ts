@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
+import { Route as AuthenticatedPairDebugRouteImport } from './routes/_authenticated/pair-debug'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ApiPublicStateRouteImport } from './routes/api/public/state'
@@ -42,6 +43,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPairDebugRoute = AuthenticatedPairDebugRouteImport.update({
+  id: '/pair-debug',
+  path: '/pair-debug',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDevicesRoute = AuthenticatedDevicesRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/devices': typeof AuthenticatedDevicesRouteWithChildren
+  '/pair-debug': typeof AuthenticatedPairDebugRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
   '/api/public/claim': typeof ApiPublicClaimRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/devices': typeof AuthenticatedDevicesRouteWithChildren
+  '/pair-debug': typeof AuthenticatedPairDebugRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
   '/api/public/claim': typeof ApiPublicClaimRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/devices': typeof AuthenticatedDevicesRouteWithChildren
+  '/_authenticated/pair-debug': typeof AuthenticatedPairDebugRoute
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/sensors/new': typeof AuthenticatedSensorsNewRoute
   '/api/public/claim': typeof ApiPublicClaimRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/devices'
+    | '/pair-debug'
     | '/setup'
     | '/sensors/new'
     | '/api/public/claim'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/devices'
+    | '/pair-debug'
     | '/setup'
     | '/sensors/new'
     | '/api/public/claim'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/dashboard'
     | '/_authenticated/devices'
+    | '/_authenticated/pair-debug'
     | '/_authenticated/setup'
     | '/_authenticated/sensors/new'
     | '/api/public/claim'
@@ -245,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof AuthenticatedSetupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pair-debug': {
+      id: '/_authenticated/pair-debug'
+      path: '/pair-debug'
+      fullPath: '/pair-debug'
+      preLoaderRoute: typeof AuthenticatedPairDebugRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/devices': {
@@ -342,6 +361,7 @@ const AuthenticatedDevicesRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRouteWithChildren
+  AuthenticatedPairDebugRoute: typeof AuthenticatedPairDebugRoute
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedSensorsNewRoute: typeof AuthenticatedSensorsNewRoute
   AuthenticatedSensorsSensorIdEditRoute: typeof AuthenticatedSensorsSensorIdEditRoute
@@ -350,6 +370,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDevicesRoute: AuthenticatedDevicesRouteWithChildren,
+  AuthenticatedPairDebugRoute: AuthenticatedPairDebugRoute,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
   AuthenticatedSensorsNewRoute: AuthenticatedSensorsNewRoute,
   AuthenticatedSensorsSensorIdEditRoute: AuthenticatedSensorsSensorIdEditRoute,
