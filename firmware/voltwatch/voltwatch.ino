@@ -527,8 +527,11 @@ void setup() {
     startConfigPortal(false);
   }
 
-  refreshConfig();
-  setLed(WiFi.status() == WL_CONNECTED ? LED_ONLINE : LED_ERROR);
+  if (WiFi.status() == WL_CONNECTED) {
+    refreshConfigWithBackoff(7, "boot");
+  } else {
+    setLed(LED_ERROR);
+  }
 }
 
 void loop() {
