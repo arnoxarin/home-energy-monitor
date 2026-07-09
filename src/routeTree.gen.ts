@@ -16,6 +16,7 @@ import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ApiPublicStateRouteImport } from './routes/api/public/state'
+import { Route as ApiPublicPairStatusRouteImport } from './routes/api/public/pair-status'
 import { Route as ApiPublicIngestRouteImport } from './routes/api/public/ingest'
 import { Route as ApiPublicFirmwareManifestRouteImport } from './routes/api/public/firmware-manifest'
 import { Route as ApiPublicConfigRouteImport } from './routes/api/public/config'
@@ -56,6 +57,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const ApiPublicStateRoute = ApiPublicStateRouteImport.update({
   id: '/api/public/state',
   path: '/api/public/state',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPairStatusRoute = ApiPublicPairStatusRouteImport.update({
+  id: '/api/public/pair-status',
+  path: '/api/public/pair-status',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicIngestRoute = ApiPublicIngestRouteImport.update({
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
+  '/api/public/pair-status': typeof ApiPublicPairStatusRoute
   '/api/public/state': typeof ApiPublicStateRoute
   '/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
+  '/api/public/pair-status': typeof ApiPublicPairStatusRoute
   '/api/public/state': typeof ApiPublicStateRoute
   '/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
   '/api/public/ingest': typeof ApiPublicIngestRoute
+  '/api/public/pair-status': typeof ApiPublicPairStatusRoute
   '/api/public/state': typeof ApiPublicStateRoute
   '/_authenticated/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/_authenticated/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/api/public/config'
     | '/api/public/firmware-manifest'
     | '/api/public/ingest'
+    | '/api/public/pair-status'
     | '/api/public/state'
     | '/devices/$deviceId/register'
     | '/sensors/$sensorId/edit'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/api/public/config'
     | '/api/public/firmware-manifest'
     | '/api/public/ingest'
+    | '/api/public/pair-status'
     | '/api/public/state'
     | '/devices/$deviceId/register'
     | '/sensors/$sensorId/edit'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/api/public/config'
     | '/api/public/firmware-manifest'
     | '/api/public/ingest'
+    | '/api/public/pair-status'
     | '/api/public/state'
     | '/_authenticated/devices/$deviceId/register'
     | '/_authenticated/sensors/$sensorId/edit'
@@ -201,6 +213,7 @@ export interface RootRouteChildren {
   ApiPublicConfigRoute: typeof ApiPublicConfigRoute
   ApiPublicFirmwareManifestRoute: typeof ApiPublicFirmwareManifestRoute
   ApiPublicIngestRoute: typeof ApiPublicIngestRoute
+  ApiPublicPairStatusRoute: typeof ApiPublicPairStatusRoute
   ApiPublicStateRoute: typeof ApiPublicStateRoute
 }
 
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/state'
       fullPath: '/api/public/state'
       preLoaderRoute: typeof ApiPublicStateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/pair-status': {
+      id: '/api/public/pair-status'
+      path: '/api/public/pair-status'
+      fullPath: '/api/public/pair-status'
+      preLoaderRoute: typeof ApiPublicPairStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ingest': {
@@ -346,6 +366,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicConfigRoute: ApiPublicConfigRoute,
   ApiPublicFirmwareManifestRoute: ApiPublicFirmwareManifestRoute,
   ApiPublicIngestRoute: ApiPublicIngestRoute,
+  ApiPublicPairStatusRoute: ApiPublicPairStatusRoute,
   ApiPublicStateRoute: ApiPublicStateRoute,
 }
 export const routeTree = rootRouteImport
