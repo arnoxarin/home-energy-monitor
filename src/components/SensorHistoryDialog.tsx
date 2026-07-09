@@ -81,9 +81,12 @@ export function SensorHistoryDialog({
   const [range, setRange] = useState<Range>("day");
   const [field, setField] = useState<string | undefined>(initialField);
 
-  const { data: readings = [], isLoading } = useQuery<Reading[]>({
+  const { data: readings = [], isFetching, isLoading } = useQuery<Reading[]>({
     queryKey: ["sensor-history", sensor.id, range],
     enabled: open,
+    // Keep previous range's data on screen while the new range loads —
+    // prevents the chart from unmounting and flickering during tab switches.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sensor_readings")
