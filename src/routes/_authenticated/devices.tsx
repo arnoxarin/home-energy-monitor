@@ -123,12 +123,11 @@ function DevicesPage() {
             <DeviceRow key={d.id} device={d} origin={origin} />
           ))
         )}
-
-        <EspCodeCard origin={origin} sampleKey={(devicesQ.data ?? [])[0]?.ingest_key ?? "YOUR_INGEST_KEY"} />
       </main>
     </div>
   );
 }
+
 
 function NewDeviceDialog({ onCreate }: { onCreate: (name: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -285,131 +284,5 @@ function DeviceRow({ device, origin }: { device: Device; origin: string }) {
   );
 }
 
-function EspCodeCard({ origin, sampleKey }: { origin: string; sampleKey: string }) {
-  const host = origin.replace(/^https?:\/\//, "");
-  const code = `// Voltwatch — ESP32 + PZEM-004T v3 example
-// Libraries (Arduino IDE > Library Manager):
-//   - PZEM004Tv30 by mandulaj
-//   - ArduinoJson by Benoit Blanchon
 
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
-#include <ArduinoJson.h>
-#include <PZEM004Tv30.h>
 
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-
-const char* INGEST_URL = "https://${host || "YOUR_APP_HOST"}/api/public/ingest";
-const char* STATE_URL  = "https://${host || "YOUR_APP_HOST"}/api/public/state";
-const char* INGEST_KEY = "${sampleKey}"; // from the Devices page
-
-// PZEM-004T v3 on UART2: RX=16, TX=17 (adjust to your wiring)
-PZEM004Tv30 pzem(Serial2, 16, 17);
-
-// Example relay on GPIO 27 — set the sensor's "pin" to "27" in the app
-const int RELAY_PIN = 27;
-
-unsigned long lastPost = 0;
-const unsigned long POST_INTERVAL_MS = 5000;
-
-void connectWifi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-  Serial.println("\\nWiFi connected");
-}
-
-void applyRelayStates(JsonArray states) {
-  for (JsonObject s : states) {
-    const char* pin = s["pin"] | "";
-    bool on = s["on"] | false;
-    if (String(pin) == String(RELAY_PIN)) {
-      digitalWrite(RELAY_PIN, on ? HIGH : LOW);
-    }
-  }
-}
-
-void postReadings() {
-  float v = pzem.voltage();
-  float i = pzem.current();
-  float p = pzem.power();
-  float e = pzem.energy();
-  float f = pzem.frequency();
-  float pf = pzem.pf();
-  if (isnan(v)) { Serial.println("PZEM read failed"); return; }
-
-  StaticJsonDocument<512> doc;
-  JsonArray readings = doc.createNestedArray("readings");
-  JsonObject r = readings.createNestedObject();
-  r["pin"] = "16"; // matches the sensor pin you set in the app
-  JsonObject payload = r.createNestedObject("payload");
-  payload["voltage"] = v;
-  payload["current"] = i;
-  payload["power"]   = p;
-  payload["energy"]  = e;
-  payload["frequency"] = f;
-  payload["pf"] = pf;
-
-  String body; serializeJson(doc, body);
-
-  WiFiClientSecure client; client.setInsecure(); // simple TLS
-  HTTPClient http;
-  http.begin(client, INGEST_URL);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("x-ingest-key", INGEST_KEY);
-  int code = http.POST(body);
-  Serial.printf("POST %d\\n", code);
-
-  if (code == 200) {
-    String resp = http.getString();
-    StaticJsonDocument<512> rd;
-    if (!deserializeJson(rd, resp)) {
-      JsonArray states = rd["states"].as<JsonArray>();
-      if (!states.isNull()) applyRelayStates(states);
-    }
-  }
-  http.end();
-}
-
-void setup() {
-  Serial.begin(115200);
-  pinMode(RELAY_PIN, OUTPUT);
-  connectWifi();
-}
-
-void loop() {
-  if (WiFi.status() != WL_CONNECTED) connectWifi();
-  if (millis() - lastPost > POST_INTERVAL_MS) {
-    lastPost = millis();
-    postReadings();
-  }
-}
-`;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>ESP32 firmware</CardTitle>
-        <CardDescription>
-          Arduino sketch for PZEM-004T v3 + optional relay. Replace WiFi credentials and the ingest key,
-          then flash your ESP32. The device polls back relay states in the POST response.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <div className="flex justify-end">
-          <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(code); toast.success("Copied sketch"); }}>
-            <Copy className="mr-1 h-3.5 w-3.5" /> Copy sketch
-          </Button>
-        </div>
-        <pre className="max-h-96 overflow-auto rounded-lg bg-muted p-4 text-xs leading-relaxed">
-          <code>{code}</code>
-        </pre>
-        <p className="text-xs text-muted-foreground">
-          Payload shape: <code>{`{"readings":[{"pin":"<pin>","payload":{...}}]}`}</code>. The "pin" must match the value you set on the sensor in <Link to="/dashboard" className="underline">the dashboard</Link>.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
