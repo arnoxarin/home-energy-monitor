@@ -182,7 +182,7 @@ export function FirmwareDialog() {
                       className={[
                         "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
                         active
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "border border-border bg-card text-muted-foreground",
                       ].join(" ")}
                     >
@@ -330,7 +330,7 @@ export function FirmwareDialog() {
                       <esp-web-install-button manifest={MANIFEST_URL} erase-first>
                         <Button
                           slot="activate"
-                          className="w-full bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg shadow-lg shadow-primary/20 h-11"
+                          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-lg shadow-primary/20 h-11"
                         >
                           <Zap className="mr-2 h-4 w-4" /> Install firmware
                         </Button>
@@ -379,7 +379,7 @@ export function FirmwareDialog() {
                       trigger={
                         <Button
                           size="sm"
-                          className="bg-primary hover:bg-primary/90 text-white"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
                           <PlugZap className="mr-1 h-4 w-4" /> Get pairing code
                         </Button>
@@ -429,7 +429,7 @@ export function FirmwareDialog() {
                     <Button
                       size="sm"
                       onClick={download}
-                      className="bg-primary hover:bg-primary/90 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Download className="mr-1 h-4 w-4" /> Download voltwatch.ino
                     </Button>
