@@ -211,6 +211,16 @@ export function SensorHistoryDialog({
     return { min, max, avg, first, last, delta, trend };
   }, [bucketed]);
 
+  // Smoothly tween the Y-axis domain so switching Day/Week/Month/Year
+  // doesn't snap the scale. Padding gives a bit of headroom above/below.
+  const targetDomain = useMemo<[number, number]>(() => {
+    if (!stats) return [0, 1];
+    const spread = stats.max - stats.min;
+    const pad = spread > 0 ? spread * 0.08 : Math.max(Math.abs(stats.max) * 0.1, 1);
+    return [stats.min - pad, stats.max + pad];
+  }, [stats]);
+  const yDomain = useTweenedDomain(targetDomain, 500);
+
   const unit = sensor.unit ?? "";
   const fmt = (n: number) => `${n.toFixed(2)}${unit ? ` ${unit}` : ""}`;
 
