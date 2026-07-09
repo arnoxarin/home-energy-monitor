@@ -49,11 +49,6 @@
 // building manually; the portal will ask for them at first boot.
 #define DEFAULT_INGEST_URL "__INGEST_URL__"
 #define DEFAULT_INGEST_KEY "__INGEST_KEY__"
-// Optional WiFi credentials baked in from the app's Setup page. When these
-// are non-placeholder, the ESP tries them first and skips the captive portal
-// on a successful connect. If they fail, the portal opens as usual.
-#define DEFAULT_WIFI_SSID  "__WIFI_SSID__"
-#define DEFAULT_WIFI_PASS  "__WIFI_PASS__"
 
 static bool isPlaceholder(const String& s) {
   return s.length() == 0 || s.startsWith("__") ;
