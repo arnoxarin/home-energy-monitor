@@ -139,9 +139,13 @@ function RootComponent() {
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
 
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <div key={pathname} className="page-transition">
+        <Outlet />
+      </div>
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
