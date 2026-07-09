@@ -324,7 +324,7 @@ bool refreshConfig() {
   if (code != 200) {
     Serial.printf("[config] err body: %s\n", body.c_str());
     http.end();
-    return;
+    return false;
   }
   http.end();
 
@@ -338,7 +338,7 @@ bool refreshConfig() {
     Serial.println("[config] your ingest URL host isn't serving the API route.");
     Serial.println("[config] use https://project--<project-id>.lovable.app/api/public/config");
     Serial.println("[config] (or the -dev.lovable.app variant for preview).");
-    return;
+    return false;
   }
 
   DynamicJsonDocument doc(8192);
@@ -346,8 +346,10 @@ bool refreshConfig() {
   if (err) {
     Serial.printf("[config] parse err: %s\n", err.c_str());
     Serial.printf("[config] first 300 chars: %s\n", body.substring(0, 300).c_str());
-    return;
+    return false;
   }
+
+
 
 
   tearDownSensors();
