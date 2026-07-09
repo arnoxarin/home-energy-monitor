@@ -214,18 +214,121 @@ export function SensorHistoryDialog({
   const unit = sensor.unit ?? "";
   const fmt = (n: number) => `${n.toFixed(2)}${unit ? ` ${unit}` : ""}`;
 
+  const exportBaseName = `${sensor.name.replace(/[^a-z0-9]+/gi, "_")}_${range}_${format(anchor, "yyyy-MM-dd")}`;
+
+  // Export the raw readings for the visible window (one row per sample).
+  const exportCsv = () => {
+    if (readings.length === 0) {
+      toast.info("Nothing to export — no readings in this range");
+      return;
+    }
+    const cols = Array.from(
+      new Set(readings.flatMap((r) => Object.keys(r.payload ?? {}))),
+    );
+    const header = ["timestamp", ...cols].join(",");
+    const rows = readings.map((r) => {
+      const cells = [
+        new Date(r.ts).toISOString(),
+        ...cols.map((c) => {
+          const v = r.payload?.[c];
+          return v === undefined || v === null ? "" : String(v);
+        }),
+      ];
+      return cells.map((v) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(",");
+    });
+    const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv" });
+    triggerDownload(blob, `${exportBaseName}.csv`);
+    toast.success(`Exported ${readings.length} readings to CSV`);
+  };
+
+  const exportPdf = async () => {
+    if (bucketed.length === 0) {
+      toast.info("Nothing to export — no readings in this range");
+      return;
+    }
+    // Lazy-load jsPDF only when the user actually exports.
+    const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+    const autoTable = (autoTableMod as { default: (doc: unknown, opts: unknown) => void }).default;
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(16);
+    doc.text(`${sensor.name} — ${activeField} history`, 40, 48);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(
+      `${RANGE_META[range].label} · ${windowLabel(range, anchor)} · ${bucketed.length} buckets`,
+      40,
+      66,
+    );
+    doc.setTextColor(0);
+
+    if (stats) {
+      doc.setFontSize(11);
+      const summary = [
+        `Latest: ${fmt(stats.last)}`,
+        `Average: ${fmt(stats.avg)}`,
+        `Min: ${fmt(stats.min)}`,
+        `Max: ${fmt(stats.max)}`,
+        `Change: ${stats.delta > 0 ? "+" : ""}${stats.delta.toFixed(2)}${unit ? ` ${unit}` : ""}`,
+      ];
+      summary.forEach((line, i) => doc.text(line, 40 + (i * (pageW - 80)) / summary.length, 92));
+    }
+
+    autoTable(doc, {
+      startY: 110,
+      head: [["Bucket", `Avg ${unit}`, `Min ${unit}`, `Max ${unit}`]],
+      body: bucketed.map((b) => [
+        b.t,
+        b.avg.toFixed(2),
+        b.min.toFixed(2),
+        b.max.toFixed(2),
+      ]),
+      styles: { fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [30, 30, 30] },
+      margin: { left: 40, right: 40 },
+    });
+
+    doc.save(`${exportBaseName}.pdf`);
+    toast.success("PDF exported");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl animate-scale-in">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {sensor.name}
-            <Badge variant="secondary" className="font-mono text-[10px] uppercase">
-              {sensor.kind}
-            </Badge>
-          </DialogTitle>
-          <DialogDescription>{RANGE_META[range].hint}</DialogDescription>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <DialogTitle className="flex items-center gap-2">
+                {sensor.name}
+                <Badge variant="secondary" className="font-mono text-[10px] uppercase">
+                  {sensor.kind}
+                </Badge>
+              </DialogTitle>
+              <DialogDescription>{RANGE_META[range].hint}</DialogDescription>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  <Download className="mr-1 h-4 w-4" /> Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportCsv}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" /> CSV (raw readings)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportPdf}>
+                  <FileText className="mr-2 h-4 w-4" /> PDF (report)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </DialogHeader>
+
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs value={range} onValueChange={(v) => setRange(v as Range)}>
