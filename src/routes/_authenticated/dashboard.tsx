@@ -261,7 +261,14 @@ function Dashboard() {
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
         {devicesQ.isLoading ? (
-          <p className="text-muted-foreground">Loading…</p>
+          <div
+            className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm">Loading your dashboard…</p>
+          </div>
         ) : (devicesQ.data ?? []).length === 0 ? (
           <EmptyState />
         ) : (
