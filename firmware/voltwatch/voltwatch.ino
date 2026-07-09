@@ -40,6 +40,20 @@
 #define FW_VERSION "1.1.0"
 #define FW_BUILD   (__DATE__ " " __TIME__)
 
+// ---------- Compile-time defaults ----------
+// These are auto-substituted by the dashboard when you download the .ino
+// for a specific device: the ingest URL becomes your app's origin and the
+// key becomes that device's ingest key. When both are baked in, the WiFi
+// setup portal only asks for WiFi credentials — no URL or key to type.
+// Leave the placeholders (__INGEST_URL__ / __INGEST_KEY__) if you're
+// building manually; the portal will ask for them at first boot.
+#define DEFAULT_INGEST_URL "__INGEST_URL__"
+#define DEFAULT_INGEST_KEY "__INGEST_KEY__"
+
+static bool isPlaceholder(const String& s) {
+  return s.length() == 0 || s.startsWith("__") ;
+}
+
 // ---------- Persistent config ----------
 Preferences prefs;
 String cfgIngest;     // .../api/public/ingest
@@ -156,12 +170,19 @@ void applySensor(int i) {
 // ---------- WiFi + captive portal ----------
 void startConfigPortal(bool onDemand) {
   WiFiManager wm;
+
+  // Only expose endpoint/key fields when they aren't already baked into
+  // this firmware build. When the dashboard personalized the .ino, the
+  // portal is WiFi-only.
+  bool needEndpoint = isPlaceholder(String(DEFAULT_INGEST_URL));
+  bool needKey      = isPlaceholder(String(DEFAULT_INGEST_KEY));
+
   WiFiManagerParameter pEndpoint("endpoint", "Ingest URL (https://.../api/public/ingest)",
                                  cfgIngest.c_str(), 200);
   WiFiManagerParameter pKey("key", "Device ingest key",
                             cfgKey.c_str(), 80);
-  wm.addParameter(&pEndpoint);
-  wm.addParameter(&pKey);
+  if (needEndpoint) wm.addParameter(&pEndpoint);
+  if (needKey)      wm.addParameter(&pKey);
   wm.setConfigPortalTimeout(300);
 
   // Blink LED fast while the portal is up so the user knows to connect
@@ -173,8 +194,8 @@ void startConfigPortal(bool onDemand) {
                      : wm.autoConnect(AP_NAME, AP_PASS);
   if (!ok) { Serial.println("[cfg] portal timed out"); ESP.restart(); }
 
-  cfgIngest = pEndpoint.getValue();
-  cfgKey    = pKey.getValue();
+  if (needEndpoint) cfgIngest = pEndpoint.getValue();
+  if (needKey)      cfgKey    = pKey.getValue();
   prefs.begin("voltwatch", false);
   prefs.putString("ingest", cfgIngest);
   prefs.putString("key",    cfgKey);
@@ -188,6 +209,14 @@ void loadConfig() {
   cfgIngest = prefs.getString("ingest", "");
   cfgKey    = prefs.getString("key", "");
   prefs.end();
+
+  // Fall back to compile-time defaults when nothing is saved yet or when
+  // the .ino was personalized for a specific device by the dashboard.
+  String defUrl = String(DEFAULT_INGEST_URL);
+  String defKey = String(DEFAULT_INGEST_KEY);
+  if (cfgIngest.length() == 0 && !isPlaceholder(defUrl)) cfgIngest = defUrl;
+  if (cfgKey.length()    == 0 && !isPlaceholder(defKey)) cfgKey    = defKey;
+
   // derive config URL from ingest URL by swapping the last path segment
   cfgConfigUrl = cfgIngest;
   int slash = cfgConfigUrl.lastIndexOf('/');
