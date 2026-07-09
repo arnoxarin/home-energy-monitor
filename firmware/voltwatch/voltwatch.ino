@@ -310,10 +310,26 @@ bool claimWithCode(const String& code) {
 }
 
 // ---------- Config fetch: rebuild sensor table ----------
+// Persist last diagnostic result so the captive portal can show what
+// happened on the previous config fetch (URL, HTTP status, first 200 bytes).
+static void saveConfigDiag(const String& url, int status, const String& body, const String& note) {
+  prefs.begin("voltwatch", false);
+  prefs.putString("diag_url",    url);
+  prefs.putInt   ("diag_status", status);
+  prefs.putString("diag_snip",   body.substring(0, 200));
+  prefs.putInt   ("diag_len",    body.length());
+  prefs.putString("diag_note",   note);
+  prefs.putULong ("diag_ts",     millis() / 1000);
+  prefs.end();
+}
+
 // Returns true when a JSON config was fetched and parsed (even if the sensor
 // list is empty — a valid empty config still counts as "server reachable").
 bool refreshConfig() {
-  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return false;
+  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) {
+    saveConfigDiag(cfgConfigUrl, 0, "", "wifi down or no URL");
+    return false;
+  }
 
   HTTPClient http;
   Serial.printf("[config] GET %s\n", cfgConfigUrl.c_str());
@@ -328,6 +344,7 @@ bool refreshConfig() {
   if (code != 200) {
     Serial.printf("[config] err body: %s\n", body.c_str());
     http.end();
+    saveConfigDiag(cfgConfigUrl, code, body, "non-200");
     return false;
   }
   http.end();
@@ -342,6 +359,7 @@ bool refreshConfig() {
     Serial.println("[config] your ingest URL host isn't serving the API route.");
     Serial.println("[config] use https://project--<project-id>.lovable.app/api/public/config");
     Serial.println("[config] (or the -dev.lovable.app variant for preview).");
+    saveConfigDiag(cfgConfigUrl, code, body, "SPA HTML - wrong host");
     return false;
   }
 
