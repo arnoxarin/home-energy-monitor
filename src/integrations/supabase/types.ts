@@ -17,6 +17,9 @@ export type Database = {
       devices: {
         Row: {
           created_at: string
+          fw_build: string | null
+          fw_reported_at: string | null
+          fw_version: string | null
           id: string
           ingest_key: string
           last_seen_at: string | null
@@ -25,6 +28,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fw_build?: string | null
+          fw_reported_at?: string | null
+          fw_version?: string | null
           id?: string
           ingest_key?: string
           last_seen_at?: string | null
@@ -33,6 +39,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fw_build?: string | null
+          fw_reported_at?: string | null
+          fw_version?: string | null
           id?: string
           ingest_key?: string
           last_seen_at?: string | null

@@ -33,6 +33,13 @@
 #include <Preferences.h>
 #include <DHT.h>
 
+// ---------- Firmware identity ----------
+// Bump FW_VERSION whenever behavior changes (LED logic, protocol, sensors).
+// FW_BUILD is baked in at compile time so the dashboard can tell two builds
+// of the same version apart.
+#define FW_VERSION "1.1.0"
+#define FW_BUILD   (__DATE__ " " __TIME__)
+
 // ---------- Persistent config ----------
 Preferences prefs;
 String cfgIngest;     // .../api/public/ingest
@@ -185,6 +192,8 @@ void refreshConfig() {
   HTTPClient http;
   http.begin(cfgConfigUrl);
   http.addHeader("x-ingest-key", cfgKey);
+  http.addHeader("x-fw-version", FW_VERSION);
+  http.addHeader("x-fw-build", FW_BUILD);
   int code = http.GET();
   if (code != 200) { Serial.printf("[config] %d\n", code); http.end(); return; }
 
@@ -276,6 +285,8 @@ void collectAndPost() {
   http.begin(cfgIngest);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-ingest-key", cfgKey);
+  http.addHeader("x-fw-version", FW_VERSION);
+  http.addHeader("x-fw-build", FW_BUILD);
   int code = http.POST(body);
   Serial.printf("[post] %d\n", code);
 
