@@ -104,6 +104,27 @@ const KIND_META: Record<SensorKind, { label: string; icon: React.ComponentType<{
   radar: { label: "Radar", icon: Radar, defaultView: "graph", unit: "", fields: ["presence", "distance"] },
 };
 
+type AlertConfig = { field?: string | null; min?: number | null; max?: number | null };
+type AlertStatus = { level: "low" | "high"; field: string; value: number; min: number | null; max: number | null } | null;
+
+function evaluateAlert(sensor: Sensor, payload: Record<string, number> | undefined): AlertStatus {
+  const alerts = (sensor.state as { alerts?: AlertConfig } | null)?.alerts;
+  if (!alerts || !payload) return null;
+  const hasMin = typeof alerts.min === "number";
+  const hasMax = typeof alerts.max === "number";
+  if (!hasMin && !hasMax) return null;
+  const field = alerts.field && alerts.field in payload ? alerts.field : pickPrimaryField(sensor.kind, payload);
+  const raw = payload[field];
+  if (typeof raw !== "number" || Number.isNaN(raw)) return null;
+  if (hasMax && raw > (alerts.max as number)) {
+    return { level: "high", field, value: raw, min: alerts.min ?? null, max: alerts.max ?? null };
+  }
+  if (hasMin && raw < (alerts.min as number)) {
+    return { level: "low", field, value: raw, min: alerts.min ?? null, max: alerts.max ?? null };
+  }
+  return null;
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
