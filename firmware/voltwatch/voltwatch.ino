@@ -49,6 +49,11 @@
 // building manually; the portal will ask for them at first boot.
 #define DEFAULT_INGEST_URL "__INGEST_URL__"
 #define DEFAULT_INGEST_KEY "__INGEST_KEY__"
+// Pairing endpoint (POST { code, fw_version, fw_build }) — used when the
+// firmware wasn't personalized for a specific device. Returns ingest_url +
+// ingest_key which are then persisted.
+#define DEFAULT_CLAIM_URL  "__CLAIM_URL__"
+
 
 static bool isPlaceholder(const String& s) {
   return s.length() == 0 || s.startsWith("__") ;
