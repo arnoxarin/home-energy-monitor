@@ -62,6 +62,8 @@ import { FirmwareDialog } from "@/components/FirmwareDialog";
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
 import { FirmwareBadge } from "@/components/FirmwareBadge";
 import { LastSeenBadge } from "@/components/LastSeenBadge";
+import { TelemetryStatus } from "@/components/TelemetryStatus";
+import { recordReading } from "@/lib/telemetry-pulse";
 import { SensorHistoryDialog } from "@/components/SensorHistoryDialog";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -166,6 +168,7 @@ function Dashboard() {
         (payload) => {
           const row = payload.new as Reading;
           if (!row?.sensor_id) return;
+          recordReading(row.sensor_id, row.ts ? new Date(row.ts).getTime() : Date.now());
           qc.setQueryData<Reading[]>(["readings", row.sensor_id], (prev) => {
             const list = prev ?? [];
             if (list.some((r) => r.id === row.id)) return list;
@@ -173,6 +176,7 @@ function Dashboard() {
             return next.length > 100 ? next.slice(next.length - 100) : next;
           });
         },
+
       )
       .subscribe();
     return () => {
@@ -499,9 +503,13 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
+          <h2 className="text-xl font-semibold flex flex-wrap items-center gap-2">
             <DeviceStatusDot lastSeenAt={device.last_seen_at} />
             {device.name}
+            <TelemetryStatus
+              sensorIds={sensors.map((s) => s.id)}
+              lastSeenAt={device.last_seen_at}
+            />
             <FirmwareBadge
               version={device.fw_version}
               build={device.fw_build}
@@ -512,6 +520,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
           <p className="text-xs text-muted-foreground">
             {device.last_seen_at ? `Last seen ${new Date(device.last_seen_at).toLocaleString()}` : "Never seen"}
           </p>
+
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowKey((v) => !v)}>
