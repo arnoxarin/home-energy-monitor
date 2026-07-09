@@ -241,18 +241,21 @@ bool claimWithCode(const String& code) {
   serializeJson(body, out);
 
   HTTPClient http;
+  Serial.printf("[claim] POST %s\n", cfgClaimUrl.c_str());
+  Serial.printf("[claim] body: %s\n", out.c_str());
   http.begin(cfgClaimUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // follow http->https / canonical host
   http.addHeader("Content-Type", "application/json");
   int status = http.POST(out);
-  Serial.printf("[claim] status %d\n", status);
-  if (status != 200) { http.end(); return false; }
-
   String resp = http.getString();
+  Serial.printf("[claim] status %d, %d bytes\n", status, resp.length());
+  Serial.printf("[claim] resp: %s\n", resp.c_str());
+  if (status != 200) { http.end(); return false; }
   http.end();
 
   DynamicJsonDocument doc(1024);
-  if (deserializeJson(doc, resp)) { Serial.println("[claim] bad JSON"); return false; }
+  DeserializationError jerr = deserializeJson(doc, resp);
+  if (jerr) { Serial.printf("[claim] bad JSON: %s\n", jerr.c_str()); return false; }
   const char* url = doc["ingest_url"] | "";
   const char* key = doc["ingest_key"] | "";
   if (!*url || !*key) return false;
@@ -275,20 +278,29 @@ void refreshConfig() {
   if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) return;
 
   HTTPClient http;
+  Serial.printf("[config] GET %s\n", cfgConfigUrl.c_str());
   http.begin(cfgConfigUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS); // fixes [config] 302
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
   http.addHeader("x-fw-build", FW_BUILD);
   int code = http.GET();
-  if (code != 200) { Serial.printf("[config] %d\n", code); http.end(); return; }
-
   String body = http.getString();
+  Serial.printf("[config] status %d, %d bytes\n", code, body.length());
+  if (code != 200) {
+    Serial.printf("[config] err body: %s\n", body.c_str());
+    http.end();
+    return;
+  }
   http.end();
 
   DynamicJsonDocument doc(4096);
   DeserializationError err = deserializeJson(doc, body);
-  if (err) { Serial.printf("[config] parse err: %s\n", err.c_str()); return; }
+  if (err) {
+    Serial.printf("[config] parse err: %s\n", err.c_str());
+    Serial.printf("[config] raw: %s\n", body.c_str());
+    return;
+  }
 
   tearDownSensors();
   JsonArray arr = doc["sensors"].as<JsonArray>();
@@ -366,6 +378,8 @@ void collectAndPost() {
   serializeJson(doc, body);
 
   HTTPClient http;
+  Serial.printf("[post] POST %s (%d readings, %d bytes)\n",
+                cfgIngest.c_str(), (int)readings.size(), body.length());
   http.begin(cfgIngest);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
@@ -373,12 +387,17 @@ void collectAndPost() {
   http.addHeader("x-fw-version", FW_VERSION);
   http.addHeader("x-fw-build", FW_BUILD);
   int code = http.POST(body);
-  Serial.printf("[post] %d\n", code);
+  String resp = http.getString();
+  Serial.printf("[post] status %d, %d bytes resp\n", code, resp.length());
 
   if (code == 200) {
-    String resp = http.getString();
     DynamicJsonDocument r(2048);
-    if (!deserializeJson(r, resp)) {
+    DeserializationError perr = deserializeJson(r, resp);
+    if (perr) {
+      Serial.printf("[post] resp parse err: %s\n", perr.c_str());
+      Serial.printf("[post] raw: %s\n", resp.c_str());
+    } else {
+      int relayCount = 0;
       for (JsonObject rel : r["relays"].as<JsonArray>()) {
         const char* pinStr = rel["pin"] | "";
         bool on = rel["on"] | false;
@@ -386,9 +405,13 @@ void collectAndPost() {
         if (pin >= 0) {
           pinMode(pin, OUTPUT);
           digitalWrite(pin, on ? HIGH : LOW);
+          relayCount++;
         }
       }
+      if (relayCount > 0) Serial.printf("[post] applied %d relay state(s)\n", relayCount);
     }
+  } else {
+    Serial.printf("[post] err body: %s\n", resp.c_str());
   }
   http.end();
 }
