@@ -277,9 +277,12 @@ void startConfigPortal(bool onDemand) {
 
 void loadConfig() {
   prefs.begin("voltwatch", true);
-  cfgIngest = prefs.getString("ingest", "");
-  cfgKey    = prefs.getString("key", "");
+  cfgIngest   = prefs.getString("ingest", "");
+  cfgKey      = prefs.getString("key", "");
+  cfgHostname = prefs.getString("hostname", "");
   prefs.end();
+  if (cfgHostname.length() == 0) cfgHostname = defaultHostname();
+  cfgHostname = sanitiseHostname(cfgHostname);
 
   // Fall back to compile-time defaults when nothing is saved yet or when
   // the .ino was personalized for a specific device by the dashboard.
