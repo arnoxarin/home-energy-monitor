@@ -306,6 +306,50 @@ function EditSensorPage() {
                     <Input value={unit} onChange={(e) => setUnit(e.target.value)} maxLength={16} />
                   </div>
                 </div>
+
+                {sensor.kind !== "relay" && (
+                  <div className="space-y-3 rounded-lg border bg-background p-4">
+                    <div>
+                      <p className="text-sm font-semibold">Threshold alerts</p>
+                      <p className="text-xs text-muted-foreground">
+                        Warn on the dashboard when readings fall outside the range. Leave a field empty to disable that bound.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1.5">
+                        <Label>Field (optional)</Label>
+                        <Input
+                          value={alertField}
+                          onChange={(e) => setAlertField(e.target.value)}
+                          placeholder="auto (primary)"
+                          maxLength={32}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Low threshold</Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={alertMin}
+                          onChange={(e) => setAlertMin(e.target.value)}
+                          placeholder="e.g. 200"
+                        />
+                        {errors.alertMin && <p className="text-xs text-destructive">{errors.alertMin}</p>}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>High threshold</Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={alertMax}
+                          onChange={(e) => setAlertMax(e.target.value)}
+                          placeholder="e.g. 250"
+                        />
+                        {errors.alertMax && <p className="text-xs text-destructive">{errors.alertMax}</p>}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
