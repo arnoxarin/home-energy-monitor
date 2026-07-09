@@ -249,6 +249,7 @@ void loadConfig() {
   // the .ino was personalized for a specific device by the dashboard.
   String defUrl = String(DEFAULT_INGEST_URL);
   String defKey = String(DEFAULT_INGEST_KEY);
+  String defClaim = String(DEFAULT_CLAIM_URL);
   if (cfgIngest.length() == 0 && !isPlaceholder(defUrl)) cfgIngest = defUrl;
   if (cfgKey.length()    == 0 && !isPlaceholder(defKey)) cfgKey    = defKey;
 
@@ -256,7 +257,65 @@ void loadConfig() {
   cfgConfigUrl = cfgIngest;
   int slash = cfgConfigUrl.lastIndexOf('/');
   if (slash > 0) cfgConfigUrl = cfgConfigUrl.substring(0, slash) + "/config";
+
+  // Prefer a baked-in claim URL; otherwise derive one from the ingest URL.
+  if (!isPlaceholder(defClaim)) {
+    cfgClaimUrl = defClaim;
+  } else if (cfgIngest.length() > 0 && slash > 0) {
+    cfgClaimUrl = cfgIngest.substring(0, slash) + "/claim";
+  }
 }
+
+// ---------- Pairing (claim) ----------
+// POSTs {"code":"123456","fw_version":..,"fw_build":..} to the claim URL,
+// and on 200 saves the returned ingest_url + ingest_key so the ESP starts
+// posting readings without any further setup.
+bool claimWithCode(const String& code) {
+  if (cfgClaimUrl.length() == 0) {
+    Serial.println("[claim] no claim URL known");
+    return false;
+  }
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  DynamicJsonDocument body(256);
+  body["code"] = code;
+  body["fw_version"] = FW_VERSION;
+  body["fw_build"] = FW_BUILD;
+  String out;
+  serializeJson(body, out);
+
+  HTTPClient http;
+  http.begin(cfgClaimUrl);
+  http.addHeader("Content-Type", "application/json");
+  int status = http.POST(out);
+  Serial.printf("[claim] status %d\n", status);
+  if (status != 200) { http.end(); return false; }
+
+  String resp = http.getString();
+  http.end();
+
+  DynamicJsonDocument r(1024);
+  if (deserializeJson(r, resp)) {
+    Serial.println("[claim] bad JSON");
+    return false;
+  }
+  const char* ingestUrl = r["ingest_url"] | "";
+  const char* ingestKey = r["ingest_key"] | "";
+  if (!*ingestUrl || !*ingestKey) return false;
+
+  cfgIngest = String(ingestUrl);
+  cfgKey    = String(ingestKey);
+  cfgConfigUrl = cfgIngest;
+  int s2 = cfgConfigUrl.lastIndexOf('/');
+  if (s2 > 0) cfgConfigUrl = cfgConfigUrl.substring(0, s2) + "/config";
+
+  prefs.begin("voltwatch", false);
+  prefs.putString("ingest", cfgIngest);
+  prefs.putString("key",    cfgKey);
+  prefs.end();
+  return true;
+}
+
 
 // ---------- Config fetch: rebuild sensor table ----------
 void refreshConfig() {
