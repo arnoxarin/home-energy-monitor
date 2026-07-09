@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import firmwareSource from "../../firmware/voltwatch/voltwatch.ino?raw";
 // Registers the <esp-web-install-button> custom element in the browser.
 import "esp-web-tools";
+import { FirmwareBuildStatus } from "./FirmwareBuildStatus";
 
 // Let TypeScript know about the custom element from esp-web-tools (React 19)
 declare module "react" {
@@ -86,6 +87,8 @@ export function FirmwareDialog() {
             fast blink = portal open, slow blink = connecting, solid = online.
           </DialogDescription>
         </DialogHeader>
+
+        <FirmwareBuildStatus />
 
         {/* ---------- One-click browser flasher ---------- */}
         <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
