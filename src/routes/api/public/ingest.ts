@@ -35,13 +35,30 @@ export const Route = createFileRoute("/api/public/ingest")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { logIngestAttempt } = await import("@/lib/ingest-log.server");
 
         const { data: device, error: dErr } = await supabaseAdmin
           .from("devices")
           .select("id, user_id")
           .eq("ingest_key", key)
           .maybeSingle();
-        if (dErr || !device) return new Response("Invalid key", { status: 401, headers: cors });
+        if (dErr || !device) {
+          await logIngestAttempt(supabaseAdmin, {
+            endpoint: "ingest",
+            request,
+            rawKey: key,
+            device: null,
+            status: 401,
+          });
+          return new Response("Invalid key", { status: 401, headers: cors });
+        }
+        await logIngestAttempt(supabaseAdmin, {
+          endpoint: "ingest",
+          request,
+          rawKey: key,
+          device,
+          status: 200,
+        });
 
         const fwVersion = request.headers.get("x-fw-version");
         const fwBuild = request.headers.get("x-fw-build");
