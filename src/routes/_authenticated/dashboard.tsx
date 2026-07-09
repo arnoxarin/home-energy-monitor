@@ -166,6 +166,7 @@ function Dashboard() {
         (payload) => {
           const row = payload.new as Reading;
           if (!row?.sensor_id) return;
+          recordReading(row.sensor_id, row.ts ? new Date(row.ts).getTime() : Date.now());
           qc.setQueryData<Reading[]>(["readings", row.sensor_id], (prev) => {
             const list = prev ?? [];
             if (list.some((r) => r.id === row.id)) return list;
@@ -173,6 +174,7 @@ function Dashboard() {
             return next.length > 100 ? next.slice(next.length - 100) : next;
           });
         },
+
       )
       .subscribe();
     return () => {
