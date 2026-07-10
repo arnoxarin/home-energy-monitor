@@ -64,7 +64,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
-import { PairDeviceDialog } from "@/components/PairDeviceDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
@@ -90,12 +89,11 @@ type SensorView = "graph" | "numeric" | "button";
 
 interface Device {
   id: string;
-  name: string;
-  ingest_key: string;
-  last_seen_at: string | null;
+  mac: string;
+  name: string | null;
+  status: "pending" | "approved" | "blocked";
   fw_version: string | null;
-  fw_build: string | null;
-  fw_reported_at: string | null;
+  last_seen: string | null;
 }
 interface Sensor {
   id: string;
