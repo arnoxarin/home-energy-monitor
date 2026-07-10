@@ -534,6 +534,12 @@ static void startConfigPortal(bool onDemand) {
   // boot still uses the normal timeout so the device eventually reboots
   // if no one is around to configure it.
   if (onDemand) {
+    // BOOT held: wipe saved WiFi credentials so the ESP cannot silently
+    // rejoin the previous network — user MUST configure via portal.
+    LOG_INFO("cfg", "on-demand portal — erasing stored WiFi credentials");
+    wm.resetSettings();
+    WiFi.disconnect(true, true);           // erase NVS WiFi config too
+    delay(200);
     wm.setConfigPortalTimeout(0);          // 0 = no timeout, wait forever
     wm.setBreakAfterConfig(true);          // exit as soon as creds are saved
     // Drop any active STA connection so the AP hotspot stays visible and
