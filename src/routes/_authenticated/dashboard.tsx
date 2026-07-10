@@ -64,7 +64,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { FirmwareDialog } from "@/components/FirmwareDialog";
-import { PairDeviceDialog } from "@/components/PairDeviceDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { DeviceStatusDot } from "@/components/DeviceStatusDot";
@@ -90,12 +89,11 @@ type SensorView = "graph" | "numeric" | "button";
 
 interface Device {
   id: string;
-  name: string;
-  ingest_key: string;
-  last_seen_at: string | null;
+  mac: string;
+  name: string | null;
+  status: "pending" | "approved" | "blocked";
   fw_version: string | null;
-  fw_build: string | null;
-  fw_reported_at: string | null;
+  last_seen: string | null;
 }
 interface Sensor {
   id: string;
@@ -256,10 +254,13 @@ function Dashboard() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-56 p-2">
-                <div className="flex flex-col gap-1 [&_button]:w-full [&_button]:justify-start">
+                <div className="flex flex-col gap-1 [&_button]:w-full [&_button]:justify-start [&_a]:w-full">
                   <FirmwareDialog />
-                  <PairDeviceDialog />
-                  <AddDeviceDialog />
+                  <Link to="/devices">
+                    <Button variant="outline" size="sm">
+                      <Plus className="mr-1 h-4 w-4" /> Manage devices
+                    </Button>
+                  </Link>
                 </div>
               </PopoverContent>
             </Popover>
@@ -471,71 +472,23 @@ function EmptyState() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add your first device</CardTitle>
+        <CardTitle>Waiting for your first device</CardTitle>
         <CardDescription>
-          Register your ESP32, then wire up sensors. Voltwatch will show live readings as soon as
-          the ESP32 starts posting.
+          Flash your ESP32 with the Voltwatch firmware — it will register itself automatically.
+          Approve it on the Devices page to bind it to your account.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <AddDeviceDialog />
+        <Link to="/devices">
+          <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Open Devices</Button>
+        </Link>
       </CardContent>
     </Card>
   );
 }
 
-function AddDeviceDialog() {
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-
-  const mut = useMutation({
-    mutationFn: async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("not signed in");
-      const { error } = await supabase
-        .from("devices")
-        .insert({ name: name.trim() || "ESP32", user_id: userData.user.id });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["devices"] });
-      toast.success("Device added");
-      setOpen(false);
-      setName("");
-    },
-    onError: (e) => toast.error((e as Error).message),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="mr-1 h-4 w-4" /> Add device
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New device</DialogTitle>
-          <DialogDescription>Give your ESP32 a name. A unique ingest key is generated.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <Label>Name</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Main panel" />
-        </div>
-        <DialogFooter>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
-            Create
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] }) {
   const qc = useQueryClient();
-  const [showKey, setShowKey] = useState(false);
   const [compact, setCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("dashboard-compact") === "1";
@@ -545,7 +498,6 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       window.localStorage.setItem("dashboard-compact", compact ? "1" : "0");
     }
   }, [compact]);
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const [editing, setEditing] = useState(false);
 
 
@@ -566,28 +518,26 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-xl font-semibold flex flex-wrap items-center gap-2">
-            <DeviceStatusDot lastSeenAt={device.last_seen_at} />
-            {device.name}
+            <DeviceStatusDot lastSeenAt={device.last_seen} />
+            {device.name || device.mac}
             <TelemetryStatus
               sensorIds={sensors.map((s) => s.id)}
-              lastSeenAt={device.last_seen_at}
+              lastSeenAt={device.last_seen}
             />
             <FirmwareBadge
               version={device.fw_version}
-              build={device.fw_build}
-              reportedAt={device.fw_reported_at}
+              build={null}
+              reportedAt={null}
             />
-            <LastSeenBadge lastSeenAt={device.last_seen_at} />
+            <LastSeenBadge lastSeenAt={device.last_seen} />
           </h2>
           <p className="text-xs text-muted-foreground">
-            {device.last_seen_at ? `Last seen ${new Date(device.last_seen_at).toLocaleString()}` : "Never seen"}
+            MAC <code className="font-mono">{device.mac}</code>
+            {device.last_seen ? <> · Last seen {new Date(device.last_seen).toLocaleString()}</> : " · Never seen"}
           </p>
 
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowKey((v) => !v)}>
-            {showKey ? "Hide" : "Show"} ingest details
-          </Button>
           <Link to="/sensors/new">
             <Button size="sm" variant="outline">
               <Plus className="mr-1 h-4 w-4" /> Add sensor
@@ -617,31 +567,11 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
         </div>
       </div>
 
-      {showKey && (
-        <Card>
-          <CardContent className="space-y-2 py-4 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground">Endpoint:</span>
-              <code className="rounded bg-muted px-2 py-0.5">{origin}/api/public/ingest</code>
-              <CopyBtn value={`${origin}/api/public/ingest`} />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground">Header x-ingest-key:</span>
-              <code className="rounded bg-muted px-2 py-0.5">{device.ingest_key}</code>
-              <CopyBtn value={device.ingest_key} />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              POST JSON: {`{"readings":[{"pin":"26","payload":{"voltage":230,"current":1.2,"power":276}}]}`}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {sensors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
         <>
-          
+
           <SortableSensorGrid
             storageKey={`sensor-layout:${device.id}`}
             sensors={sensors}

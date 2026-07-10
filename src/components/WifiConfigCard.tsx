@@ -72,24 +72,6 @@ export function WifiConfigCard() {
     try {
       // Persist locally so the next firmware download bakes these creds in.
       window.localStorage.setItem(WIFI_STORAGE_KEY, JSON.stringify(result.data));
-      // Verify the app's ingest endpoint is reachable — this is what the
-      // ESP32 will call once it joins the network. A quick pre-flight lets
-      // us surface obvious problems before the user re-flashes.
-      const controller = new AbortController();
-      const timer = window.setTimeout(() => controller.abort(), 6000);
-      const res = await fetch("/api/public/ingest", {
-        method: "OPTIONS",
-        signal: controller.signal,
-      }).catch((err) => {
-        if ((err as Error).name === "AbortError") {
-          throw new Error("Timed out reaching the ingest endpoint");
-        }
-        throw err;
-      });
-      window.clearTimeout(timer);
-      if (res && res.status >= 500) {
-        throw new Error(`Ingest endpoint returned ${res.status}`);
-      }
       setSaved(true);
       setStatus("success");
       toast.success("WiFi applied — flash firmware to push it to your ESP32");
