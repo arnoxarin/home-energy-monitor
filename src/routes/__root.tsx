@@ -91,10 +91,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "Live power, temperature and sensor dashboards for your ESP32 setup.",
+          "Monitor home power consumption from an ESP32 + PZEM-04 in real time. Add more sensors and view live graphs, numbers or controls.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Voltwatch — Home Power Monitoring" },
+      { name: "twitter:description", content: "Monitor home power consumption from an ESP32 + PZEM-04 in real time. Add more sensors and view live graphs, numbers or controls." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/1dabedc7-4480-4bec-bfa6-d82f4519bca0" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/1dabedc7-4480-4bec-bfa6-d82f4519bca0" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
