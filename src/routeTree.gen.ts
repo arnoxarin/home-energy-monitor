@@ -13,18 +13,11 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSetupRouteImport } from './routes/_authenticated/setup'
-import { Route as AuthenticatedPairDebugRouteImport } from './routes/_authenticated/pair-debug'
 import { Route as AuthenticatedDevicesRouteImport } from './routes/_authenticated/devices'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as ApiPublicStateRouteImport } from './routes/api/public/state'
-import { Route as ApiPublicPairStatusRouteImport } from './routes/api/public/pair-status'
-import { Route as ApiPublicIngestRouteImport } from './routes/api/public/ingest'
 import { Route as ApiPublicFirmwareManifestRouteImport } from './routes/api/public/firmware-manifest'
-import { Route as ApiPublicConfigRouteImport } from './routes/api/public/config'
-import { Route as ApiPublicClaimRouteImport } from './routes/api/public/claim'
 import { Route as AuthenticatedSensorsNewRouteImport } from './routes/_authenticated/sensors.new'
 import { Route as AuthenticatedSensorsSensorIdEditRouteImport } from './routes/_authenticated/sensors.$sensorId.edit'
-import { Route as AuthenticatedDevicesDeviceIdRegisterRouteImport } from './routes/_authenticated/devices.$deviceId.register'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -45,11 +38,6 @@ const AuthenticatedSetupRoute = AuthenticatedSetupRouteImport.update({
   path: '/setup',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedPairDebugRoute = AuthenticatedPairDebugRouteImport.update({
-  id: '/pair-debug',
-  path: '/pair-debug',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedDevicesRoute = AuthenticatedDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
@@ -60,37 +48,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiPublicStateRoute = ApiPublicStateRouteImport.update({
-  id: '/api/public/state',
-  path: '/api/public/state',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicPairStatusRoute = ApiPublicPairStatusRouteImport.update({
-  id: '/api/public/pair-status',
-  path: '/api/public/pair-status',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicIngestRoute = ApiPublicIngestRouteImport.update({
-  id: '/api/public/ingest',
-  path: '/api/public/ingest',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicFirmwareManifestRoute =
   ApiPublicFirmwareManifestRouteImport.update({
     id: '/api/public/firmware-manifest',
     path: '/api/public/firmware-manifest',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicConfigRoute = ApiPublicConfigRouteImport.update({
-  id: '/api/public/config',
-  path: '/api/public/config',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicClaimRoute = ApiPublicClaimRouteImport.update({
-  id: '/api/public/claim',
-  path: '/api/public/claim',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedSensorsNewRoute = AuthenticatedSensorsNewRouteImport.update({
   id: '/sensors/new',
   path: '/sensors/new',
@@ -102,45 +65,25 @@ const AuthenticatedSensorsSensorIdEditRoute =
     path: '/sensors/$sensorId/edit',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedDevicesDeviceIdRegisterRoute =
-  AuthenticatedDevicesDeviceIdRegisterRouteImport.update({
-    id: '/$deviceId/register',
-    path: '/$deviceId/register',
-    getParentRoute: () => AuthenticatedDevicesRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/devices': typeof AuthenticatedDevicesRouteWithChildren
-  '/pair-debug': typeof AuthenticatedPairDebugRoute
+  '/devices': typeof AuthenticatedDevicesRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
-  '/api/public/claim': typeof ApiPublicClaimRoute
-  '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
-  '/api/public/ingest': typeof ApiPublicIngestRoute
-  '/api/public/pair-status': typeof ApiPublicPairStatusRoute
-  '/api/public/state': typeof ApiPublicStateRoute
-  '/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/devices': typeof AuthenticatedDevicesRouteWithChildren
-  '/pair-debug': typeof AuthenticatedPairDebugRoute
+  '/devices': typeof AuthenticatedDevicesRoute
   '/setup': typeof AuthenticatedSetupRoute
   '/sensors/new': typeof AuthenticatedSensorsNewRoute
-  '/api/public/claim': typeof ApiPublicClaimRoute
-  '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
-  '/api/public/ingest': typeof ApiPublicIngestRoute
-  '/api/public/pair-status': typeof ApiPublicPairStatusRoute
-  '/api/public/state': typeof ApiPublicStateRoute
-  '/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
 }
 export interface FileRoutesById {
@@ -149,17 +92,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/devices': typeof AuthenticatedDevicesRouteWithChildren
-  '/_authenticated/pair-debug': typeof AuthenticatedPairDebugRoute
+  '/_authenticated/devices': typeof AuthenticatedDevicesRoute
   '/_authenticated/setup': typeof AuthenticatedSetupRoute
   '/_authenticated/sensors/new': typeof AuthenticatedSensorsNewRoute
-  '/api/public/claim': typeof ApiPublicClaimRoute
-  '/api/public/config': typeof ApiPublicConfigRoute
   '/api/public/firmware-manifest': typeof ApiPublicFirmwareManifestRoute
-  '/api/public/ingest': typeof ApiPublicIngestRoute
-  '/api/public/pair-status': typeof ApiPublicPairStatusRoute
-  '/api/public/state': typeof ApiPublicStateRoute
-  '/_authenticated/devices/$deviceId/register': typeof AuthenticatedDevicesDeviceIdRegisterRoute
   '/_authenticated/sensors/$sensorId/edit': typeof AuthenticatedSensorsSensorIdEditRoute
 }
 export interface FileRouteTypes {
@@ -169,16 +105,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/devices'
-    | '/pair-debug'
     | '/setup'
     | '/sensors/new'
-    | '/api/public/claim'
-    | '/api/public/config'
     | '/api/public/firmware-manifest'
-    | '/api/public/ingest'
-    | '/api/public/pair-status'
-    | '/api/public/state'
-    | '/devices/$deviceId/register'
     | '/sensors/$sensorId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -186,16 +115,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/devices'
-    | '/pair-debug'
     | '/setup'
     | '/sensors/new'
-    | '/api/public/claim'
-    | '/api/public/config'
     | '/api/public/firmware-manifest'
-    | '/api/public/ingest'
-    | '/api/public/pair-status'
-    | '/api/public/state'
-    | '/devices/$deviceId/register'
     | '/sensors/$sensorId/edit'
   id:
     | '__root__'
@@ -204,16 +126,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/dashboard'
     | '/_authenticated/devices'
-    | '/_authenticated/pair-debug'
     | '/_authenticated/setup'
     | '/_authenticated/sensors/new'
-    | '/api/public/claim'
-    | '/api/public/config'
     | '/api/public/firmware-manifest'
-    | '/api/public/ingest'
-    | '/api/public/pair-status'
-    | '/api/public/state'
-    | '/_authenticated/devices/$deviceId/register'
     | '/_authenticated/sensors/$sensorId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -221,12 +136,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ApiPublicClaimRoute: typeof ApiPublicClaimRoute
-  ApiPublicConfigRoute: typeof ApiPublicConfigRoute
   ApiPublicFirmwareManifestRoute: typeof ApiPublicFirmwareManifestRoute
-  ApiPublicIngestRoute: typeof ApiPublicIngestRoute
-  ApiPublicPairStatusRoute: typeof ApiPublicPairStatusRoute
-  ApiPublicStateRoute: typeof ApiPublicStateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -259,13 +169,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSetupRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/pair-debug': {
-      id: '/_authenticated/pair-debug'
-      path: '/pair-debug'
-      fullPath: '/pair-debug'
-      preLoaderRoute: typeof AuthenticatedPairDebugRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/devices': {
       id: '/_authenticated/devices'
       path: '/devices'
@@ -280,46 +183,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/state': {
-      id: '/api/public/state'
-      path: '/api/public/state'
-      fullPath: '/api/public/state'
-      preLoaderRoute: typeof ApiPublicStateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/pair-status': {
-      id: '/api/public/pair-status'
-      path: '/api/public/pair-status'
-      fullPath: '/api/public/pair-status'
-      preLoaderRoute: typeof ApiPublicPairStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/ingest': {
-      id: '/api/public/ingest'
-      path: '/api/public/ingest'
-      fullPath: '/api/public/ingest'
-      preLoaderRoute: typeof ApiPublicIngestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/firmware-manifest': {
       id: '/api/public/firmware-manifest'
       path: '/api/public/firmware-manifest'
       fullPath: '/api/public/firmware-manifest'
       preLoaderRoute: typeof ApiPublicFirmwareManifestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/config': {
-      id: '/api/public/config'
-      path: '/api/public/config'
-      fullPath: '/api/public/config'
-      preLoaderRoute: typeof ApiPublicConfigRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/claim': {
-      id: '/api/public/claim'
-      path: '/api/public/claim'
-      fullPath: '/api/public/claim'
-      preLoaderRoute: typeof ApiPublicClaimRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/sensors/new': {
@@ -336,32 +204,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSensorsSensorIdEditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/devices/$deviceId/register': {
-      id: '/_authenticated/devices/$deviceId/register'
-      path: '/$deviceId/register'
-      fullPath: '/devices/$deviceId/register'
-      preLoaderRoute: typeof AuthenticatedDevicesDeviceIdRegisterRouteImport
-      parentRoute: typeof AuthenticatedDevicesRoute
-    }
   }
 }
 
-interface AuthenticatedDevicesRouteChildren {
-  AuthenticatedDevicesDeviceIdRegisterRoute: typeof AuthenticatedDevicesDeviceIdRegisterRoute
-}
-
-const AuthenticatedDevicesRouteChildren: AuthenticatedDevicesRouteChildren = {
-  AuthenticatedDevicesDeviceIdRegisterRoute:
-    AuthenticatedDevicesDeviceIdRegisterRoute,
-}
-
-const AuthenticatedDevicesRouteWithChildren =
-  AuthenticatedDevicesRoute._addFileChildren(AuthenticatedDevicesRouteChildren)
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRouteWithChildren
-  AuthenticatedPairDebugRoute: typeof AuthenticatedPairDebugRoute
+  AuthenticatedDevicesRoute: typeof AuthenticatedDevicesRoute
   AuthenticatedSetupRoute: typeof AuthenticatedSetupRoute
   AuthenticatedSensorsNewRoute: typeof AuthenticatedSensorsNewRoute
   AuthenticatedSensorsSensorIdEditRoute: typeof AuthenticatedSensorsSensorIdEditRoute
@@ -369,8 +217,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedDevicesRoute: AuthenticatedDevicesRouteWithChildren,
-  AuthenticatedPairDebugRoute: AuthenticatedPairDebugRoute,
+  AuthenticatedDevicesRoute: AuthenticatedDevicesRoute,
   AuthenticatedSetupRoute: AuthenticatedSetupRoute,
   AuthenticatedSensorsNewRoute: AuthenticatedSensorsNewRoute,
   AuthenticatedSensorsSensorIdEditRoute: AuthenticatedSensorsSensorIdEditRoute,
@@ -383,12 +230,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ApiPublicClaimRoute: ApiPublicClaimRoute,
-  ApiPublicConfigRoute: ApiPublicConfigRoute,
   ApiPublicFirmwareManifestRoute: ApiPublicFirmwareManifestRoute,
-  ApiPublicIngestRoute: ApiPublicIngestRoute,
-  ApiPublicPairStatusRoute: ApiPublicPairStatusRoute,
-  ApiPublicStateRoute: ApiPublicStateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
