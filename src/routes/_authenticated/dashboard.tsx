@@ -254,10 +254,13 @@ function Dashboard() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-56 p-2">
-                <div className="flex flex-col gap-1 [&_button]:w-full [&_button]:justify-start">
+                <div className="flex flex-col gap-1 [&_button]:w-full [&_button]:justify-start [&_a]:w-full">
                   <FirmwareDialog />
-                  <PairDeviceDialog />
-                  <AddDeviceDialog />
+                  <Link to="/devices">
+                    <Button variant="outline" size="sm">
+                      <Plus className="mr-1 h-4 w-4" /> Manage devices
+                    </Button>
+                  </Link>
                 </div>
               </PopoverContent>
             </Popover>
