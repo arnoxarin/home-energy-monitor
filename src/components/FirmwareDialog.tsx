@@ -31,8 +31,8 @@ import { PairDeviceDialog } from "./PairDeviceDialog";
 // Vite bundles the .ino file as a raw string, so the firmware source
 // is always in sync with what's in the repo.
 import firmwareSource from "../../firmware/voltwatch/voltwatch.ino?raw";
-// Registers the <esp-web-install-button> custom element in the browser.
-import "esp-web-tools";
+// esp-web-tools registers a browser custom element (extends HTMLElement),
+// so it must only load in the browser — importing at module scope crashes SSR.
 import { FirmwareBuildStatus } from "./FirmwareBuildStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -71,6 +71,12 @@ export function FirmwareDialog() {
   const [deviceId, setDeviceId] = useState<string>("");
   const webSerialSupported =
     typeof navigator !== "undefined" && "serial" in navigator;
+
+  useEffect(() => {
+    if (open) {
+      import("esp-web-tools").catch(() => {});
+    }
+  }, [open]);
 
   const { data: devices = [] } = useQuery<DeviceRow[]>({
     queryKey: ["devices-for-firmware"],
