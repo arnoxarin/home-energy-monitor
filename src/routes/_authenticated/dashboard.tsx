@@ -241,7 +241,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-muted/20">
       <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Activity className="h-5 w-5" />
@@ -271,7 +271,7 @@ function Dashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8 space-y-6 sm:space-y-8">
         {devicesQ.isLoading ? (
           <div
             className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-muted-foreground"
