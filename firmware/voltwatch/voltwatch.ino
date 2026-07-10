@@ -542,9 +542,12 @@ static void startConfigPortal(bool onDemand) {
     delay(200);
     wm.setConfigPortalTimeout(0);          // 0 = no timeout, wait forever
     wm.setBreakAfterConfig(true);          // exit as soon as creds are saved
-    // Drop any active STA connection so the AP hotspot stays visible and
-    // WiFiManager doesn't silently fall back to the previously joined SSID.
-    WiFi.disconnect(false, false);
+    // Force AP+STA mode BEFORE the portal starts. Without this, tapping
+    // "Configure WiFi" in the menu triggers a scan that briefly switches
+    // the radio out of AP mode — on many ESP32 builds the SoftAP never
+    // recovers, the hotspot drops, and the scan page never loads.
+    WiFi.mode(WIFI_AP_STA);
+    delay(100);
   } else {
     wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
   }
