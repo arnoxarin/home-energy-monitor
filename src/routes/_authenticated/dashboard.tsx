@@ -837,19 +837,19 @@ function SortableSensorGrid({
 
   return (
     <div
-      className={`glass-frame mx-auto ${compact ? "max-w-3xl" : "max-w-4xl"} ${editing ? "ring-2 ring-primary/40" : ""}`}
+      className={`glass-frame mx-auto ${compact ? "max-w-3xl" : "max-w-4xl"} ${editing && !isMobile ? "ring-2 ring-primary/40" : ""}`}
     >
       <ResponsiveGrid
         className="layout"
         layout={effectiveLayout as Layout[]}
         cols={cols}
-        rowHeight={compact ? 60 : 90}
+        rowHeight={isMobile ? 70 : compact ? 60 : 90}
         margin={[8, 8]}
-        isDraggable={editing}
-        isResizable={editing}
+        isDraggable={editing && !isMobile}
+        isResizable={editing && !isMobile}
         compactType="vertical"
         onLayoutChange={(next: Layout[]) => {
-          if (editing) setLayout(next);
+          if (editing && !isMobile) setLayout(next);
         }}
       >
         {effectiveLayout.map((l) => {
