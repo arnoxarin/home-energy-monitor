@@ -408,7 +408,15 @@ static void setupWatchdog() {
   };
 
   esp_err_t initResult = esp_task_wdt_init(&twdt_config);
-  if (initResult != ESP_OK && initResult != ESP_ERR_INVALID_STATE) {
+  if (initResult == ESP_ERR_INVALID_STATE) {
+    // Arduino core already initialized TWDT (typically with a 5s timeout).
+    // Reconfigure so our longer timeout takes effect — otherwise blocking
+    // TLS handshakes to the config endpoint will panic the loopTask.
+    esp_err_t reconf = esp_task_wdt_reconfigure(&twdt_config);
+    if (reconf != ESP_OK) {
+      LOG_WARN("wdt", "reconfigure failed: %d", reconf);
+    }
+  } else if (initResult != ESP_OK) {
     LOG_WARN("wdt", "init failed: %d", initResult);
   }
 
