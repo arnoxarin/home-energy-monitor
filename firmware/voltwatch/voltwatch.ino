@@ -516,7 +516,19 @@ static void startConfigPortal(bool onDemand) {
               "FW " FW_VERSION " · " FW_BUILD "</p>";
   wm.setCustomMenuHTML(diagHtml.c_str());
 
-  wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
+  // On-demand portal (BOOT held): never time out — stay in config mode
+  // until the user saves credentials or presses RESET. Auto-connect at
+  // boot still uses the normal timeout so the device eventually reboots
+  // if no one is around to configure it.
+  if (onDemand) {
+    wm.setConfigPortalTimeout(0);          // 0 = no timeout, wait forever
+    wm.setBreakAfterConfig(true);          // exit as soon as creds are saved
+    // Drop any active STA connection so the AP hotspot stays visible and
+    // WiFiManager doesn't silently fall back to the previously joined SSID.
+    WiFi.disconnect(false, false);
+  } else {
+    wm.setConfigPortalTimeout(PORTAL_TIMEOUT_S);
+  }
 
   setLed(LED_PORTAL);
   wm.setAPCallback([](WiFiManager*) { setLed(LED_PORTAL); });
@@ -530,7 +542,12 @@ static void startConfigPortal(bool onDemand) {
   bool ok = onDemand ? wm.startConfigPortal(AP_NAME, AP_PASS)
                      : wm.autoConnect(AP_NAME, AP_PASS);
   if (!ok) {
-    LOG_WARN("cfg", "portal timed out — rebooting");
+    if (onDemand) {
+      // With timeout=0 this shouldn't happen, but guard anyway.
+      LOG_WARN("cfg", "on-demand portal exited unexpectedly — rebooting");
+    } else {
+      LOG_WARN("cfg", "portal timed out — rebooting");
+    }
     ESP.restart();
   }
 
