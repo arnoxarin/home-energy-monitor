@@ -825,7 +825,9 @@ static bool refreshConfig() {
   http.addHeader("x-fw-version", FW_VERSION);
   http.addHeader("x-fw-build",   FW_BUILD);
   http.setTimeout(10000);
+  pauseLoopWatchdog();  // blocking TLS handshake can exceed WDT timeout
   int code = http.GET();
+  resumeLoopWatchdog();
 
   if (code <= 0) {
     LOG_ERR("config", "HTTP error: %s", http.errorToString(code).c_str());
