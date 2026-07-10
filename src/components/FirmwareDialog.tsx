@@ -72,6 +72,12 @@ export function FirmwareDialog() {
   const webSerialSupported =
     typeof navigator !== "undefined" && "serial" in navigator;
 
+  useEffect(() => {
+    if (open) {
+      import("esp-web-tools").catch(() => {});
+    }
+  }, [open]);
+
   const { data: devices = [] } = useQuery<DeviceRow[]>({
     queryKey: ["devices-for-firmware"],
     enabled: open,
