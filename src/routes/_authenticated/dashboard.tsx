@@ -47,6 +47,7 @@ import {
   AlertTriangle,
   Copy,
   LogOut,
+  Menu,
   Plus,
   Trash2,
   Pencil,
@@ -75,6 +76,7 @@ import { SensorHistoryDialog } from "@/components/SensorHistoryDialog";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const ResponsiveGrid = WidthProvider(GridLayout);
 
@@ -246,11 +248,20 @@ function Dashboard() {
             <span className="text-lg font-semibold">Voltwatch</span>
           </div>
           <div className="flex items-center gap-2">
-            
-            <FirmwareDialog />
-            <PairDeviceDialog />
-            <AddDeviceDialog />
-
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" title="Menu" aria-label="Open menu">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-2">
+                <div className="flex flex-col gap-1 [&_button]:w-full [&_button]:justify-start">
+                  <FirmwareDialog />
+                  <PairDeviceDialog />
+                  <AddDeviceDialog />
+                </div>
+              </PopoverContent>
+            </Popover>
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
               <LogOut className="h-4 w-4" />
