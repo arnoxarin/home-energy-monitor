@@ -14,124 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
-      device_pair_codes: {
-        Row: {
-          claimed_at: string | null
-          claimed_device_id: string | null
-          code: string
-          created_at: string
-          expires_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          claimed_at?: string | null
-          claimed_device_id?: string | null
-          code: string
-          created_at?: string
-          expires_at?: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          claimed_at?: string | null
-          claimed_device_id?: string | null
-          code?: string
-          created_at?: string
-          expires_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       devices: {
         Row: {
           created_at: string
-          fw_build: string | null
-          fw_reported_at: string | null
+          device_token: string | null
           fw_version: string | null
           id: string
-          ingest_key: string
-          last_seen_at: string | null
-          name: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          fw_build?: string | null
-          fw_reported_at?: string | null
-          fw_version?: string | null
-          id?: string
-          ingest_key?: string
-          last_seen_at?: string | null
-          name: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          fw_build?: string | null
-          fw_reported_at?: string | null
-          fw_version?: string | null
-          id?: string
-          ingest_key?: string
-          last_seen_at?: string | null
-          name?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      ingest_attempts: {
-        Row: {
-          device_id: string | null
-          endpoint: string
-          fw_build: string | null
-          fw_version: string | null
-          id: number
-          ip: string | null
-          key_len: number
-          key_masked: string
-          matched: boolean
-          status: number | null
-          ts: string
+          last_seen: string | null
+          mac: string
+          name: string | null
+          status: string
           user_id: string | null
         }
         Insert: {
-          device_id?: string | null
-          endpoint: string
-          fw_build?: string | null
+          created_at?: string
+          device_token?: string | null
           fw_version?: string | null
-          id?: never
-          ip?: string | null
-          key_len: number
-          key_masked: string
-          matched: boolean
-          status?: number | null
-          ts?: string
+          id?: string
+          last_seen?: string | null
+          mac: string
+          name?: string | null
+          status?: string
           user_id?: string | null
         }
         Update: {
-          device_id?: string | null
-          endpoint?: string
-          fw_build?: string | null
+          created_at?: string
+          device_token?: string | null
           fw_version?: string | null
-          id?: never
-          ip?: string | null
-          key_len?: number
-          key_masked?: string
-          matched?: boolean
-          status?: number | null
-          ts?: string
+          id?: string
+          last_seen?: string | null
+          mac?: string
+          name?: string | null
+          status?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "ingest_attempts_device_id_fkey"
-            columns: ["device_id"]
-            isOneToOne: false
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sensor_readings: {
         Row: {
