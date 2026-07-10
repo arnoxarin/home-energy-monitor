@@ -481,6 +481,14 @@ static void startConfigPortal(bool onDemand) {
   if (offerCode)    wm.addParameter(&pCode);
   wm.addParameter(&pHost);
 
+  // ESP32 WiFi scans can briefly drop the SoftAP on some boards/cores.
+  // That is exactly what happens when the normal "Configure WiFi" button
+  // opens /wifi: the phone loses Voltwatch-Setup and the captive browser
+  // closes. Use WiFiManager's no-scan WiFi page instead; it keeps the AP
+  // alive and lets the user type the SSID/password manually.
+  const char* portalMenu[] = {"wifinoscan", "info", "custom"};
+  wm.setMenu(portalMenu, 3);
+
   // ---- Diagnostics block shown in the captive portal ----
   prefs.begin("voltwatch", true);
   String dUrl    = prefs.getString("diag_url",    "(none yet)");
@@ -542,10 +550,8 @@ static void startConfigPortal(bool onDemand) {
     delay(200);
     wm.setConfigPortalTimeout(0);          // 0 = no timeout, wait forever
     wm.setBreakAfterConfig(true);          // exit as soon as creds are saved
-    // Force AP+STA mode BEFORE the portal starts. Without this, tapping
-    // "Configure WiFi" in the menu triggers a scan that briefly switches
-    // the radio out of AP mode — on many ESP32 builds the SoftAP never
-    // recovers, the hotspot drops, and the scan page never loads.
+    // Force AP+STA mode BEFORE the portal starts. This keeps the setup
+    // hotspot active while the station side later connects to home WiFi.
     WiFi.mode(WIFI_AP_STA);
     delay(100);
   } else {
