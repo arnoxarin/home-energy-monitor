@@ -776,8 +776,12 @@ function SortableSensorGrid({
   compact: boolean;
   editing: boolean;
 }) {
-  const cols = compact ? 12 : 7;
+  const isMobile = useIsMobile();
+  const cols = isMobile ? 4 : compact ? 12 : 7;
   const defaultSize = (view: SensorView) => {
+    if (isMobile) {
+      return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 4, h: 2 } : { w: 4, h: 3 };
+    }
     if (compact) {
       return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 3, h: 3 } : { w: 4, h: 3 };
     }
