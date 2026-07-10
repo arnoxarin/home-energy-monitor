@@ -32,7 +32,8 @@ import { PairDeviceDialog } from "./PairDeviceDialog";
 // is always in sync with what's in the repo.
 import firmwareSource from "../../firmware/voltwatch/voltwatch.ino?raw";
 // esp-web-tools registers a browser custom element (extends HTMLElement),
-// so it must only load in the browser — importing at module scope crashes SSR.
+// so it is served as a static browser-only module instead of being imported
+// into the SSR bundle.
 import { FirmwareBuildStatus } from "./FirmwareBuildStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -50,6 +51,7 @@ declare module "react" {
 }
 
 const MANIFEST_URL = "/firmware/manifest.json";
+const ESP_WEB_TOOLS_SCRIPT = "/vendor/esp-web-tools/install-button.js";
 const HEADING_FONT = "'Space Grotesk', ui-sans-serif, system-ui, sans-serif";
 const BODY_FONT = "'DM Sans', ui-sans-serif, system-ui, sans-serif";
 
@@ -73,9 +75,14 @@ export function FirmwareDialog() {
     typeof navigator !== "undefined" && "serial" in navigator;
 
   useEffect(() => {
-    if (open) {
-      import("esp-web-tools").catch(() => {});
-    }
+    if (!open || typeof document === "undefined") return;
+    if (customElements.get("esp-web-install-button")) return;
+    if (document.querySelector(`script[src="${ESP_WEB_TOOLS_SCRIPT}"]`)) return;
+
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = ESP_WEB_TOOLS_SCRIPT;
+    document.head.appendChild(script);
   }, [open]);
 
   const { data: devices = [] } = useQuery<DeviceRow[]>({
