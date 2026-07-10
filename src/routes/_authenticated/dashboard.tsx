@@ -804,13 +804,15 @@ function SortableSensorGrid({
     }
   }, [layout, storageKey]);
 
-  // Merge saved layout with sensors: keep saved positions, append new sensors
+  // Merge saved layout with sensors: keep saved positions, append new sensors.
+  // On mobile, ignore the saved (desktop) layout and lay tiles out fresh so
+  // nothing overflows the 4-column mobile grid.
   const effectiveLayout: Layout[] = useMemo(() => {
-    const byId = new Map(layout.map((l) => [l.i, l]));
+    const source = isMobile ? [] : layout;
+    const byId = new Map(source.map((l) => [l.i, l]));
     const rankBase: Record<SensorView, number> = { graph: 0, numeric: 1, button: 2 };
     const sorted = [...sensors].sort((a, b) => rankBase[a.view] - rankBase[b.view]);
-    // find bottom row
-    let nextY = layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
+    let nextY = source.reduce((m, l) => Math.max(m, l.y + l.h), 0);
     let nextX = 0;
     const out: Layout[] = [];
     for (const s of sorted) {
@@ -829,7 +831,7 @@ function SortableSensorGrid({
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout, sensors, cols, compact]);
+  }, [layout, sensors, cols, compact, isMobile]);
 
   const sensorMap = useMemo(() => new Map(sensors.map((s) => [s.id, s])), [sensors]);
 
