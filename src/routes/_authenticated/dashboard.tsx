@@ -77,6 +77,7 @@ import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ResponsiveGrid = WidthProvider(GridLayout);
 
@@ -240,7 +241,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-muted/20">
       <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Activity className="h-5 w-5" />
@@ -270,7 +271,7 @@ function Dashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+      <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8 space-y-6 sm:space-y-8">
         {devicesQ.isLoading ? (
           <div
             className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-muted-foreground"
@@ -775,8 +776,12 @@ function SortableSensorGrid({
   compact: boolean;
   editing: boolean;
 }) {
-  const cols = compact ? 12 : 7;
+  const isMobile = useIsMobile();
+  const cols = isMobile ? 4 : compact ? 12 : 7;
   const defaultSize = (view: SensorView) => {
+    if (isMobile) {
+      return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 4, h: 2 } : { w: 4, h: 3 };
+    }
     if (compact) {
       return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 3, h: 3 } : { w: 4, h: 3 };
     }
@@ -799,13 +804,15 @@ function SortableSensorGrid({
     }
   }, [layout, storageKey]);
 
-  // Merge saved layout with sensors: keep saved positions, append new sensors
+  // Merge saved layout with sensors: keep saved positions, append new sensors.
+  // On mobile, ignore the saved (desktop) layout and lay tiles out fresh so
+  // nothing overflows the 4-column mobile grid.
   const effectiveLayout: Layout[] = useMemo(() => {
-    const byId = new Map(layout.map((l) => [l.i, l]));
+    const source = isMobile ? [] : layout;
+    const byId = new Map(source.map((l) => [l.i, l]));
     const rankBase: Record<SensorView, number> = { graph: 0, numeric: 1, button: 2 };
     const sorted = [...sensors].sort((a, b) => rankBase[a.view] - rankBase[b.view]);
-    // find bottom row
-    let nextY = layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
+    let nextY = source.reduce((m, l) => Math.max(m, l.y + l.h), 0);
     let nextX = 0;
     const out: Layout[] = [];
     for (const s of sorted) {
@@ -824,25 +831,25 @@ function SortableSensorGrid({
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout, sensors, cols, compact]);
+  }, [layout, sensors, cols, compact, isMobile]);
 
   const sensorMap = useMemo(() => new Map(sensors.map((s) => [s.id, s])), [sensors]);
 
   return (
     <div
-      className={`glass-frame mx-auto ${compact ? "max-w-3xl" : "max-w-4xl"} ${editing ? "ring-2 ring-primary/40" : ""}`}
+      className={`glass-frame mx-auto ${compact ? "max-w-3xl" : "max-w-4xl"} ${editing && !isMobile ? "ring-2 ring-primary/40" : ""}`}
     >
       <ResponsiveGrid
         className="layout"
         layout={effectiveLayout as Layout[]}
         cols={cols}
-        rowHeight={compact ? 60 : 90}
+        rowHeight={isMobile ? 70 : compact ? 60 : 90}
         margin={[8, 8]}
-        isDraggable={editing}
-        isResizable={editing}
+        isDraggable={editing && !isMobile}
+        isResizable={editing && !isMobile}
         compactType="vertical"
         onLayoutChange={(next: Layout[]) => {
-          if (editing) setLayout(next);
+          if (editing && !isMobile) setLayout(next);
         }}
       >
         {effectiveLayout.map((l) => {
