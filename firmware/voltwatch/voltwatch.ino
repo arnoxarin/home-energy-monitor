@@ -31,6 +31,19 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
+
+// Helper: begin an HTTP/HTTPS request. For https:// URLs we use a
+// WiFiClientSecure in "insecure" mode (skip cert verification) — the
+// ESP32 HTTPClient otherwise returns -1 "connection refused" during the
+// TLS handshake because no root CA bundle is loaded.
+static bool beginHttp(HTTPClient& http, WiFiClientSecure& tls, const String& url) {
+  if (url.startsWith("https://")) {
+    tls.setInsecure();
+    return http.begin(tls, url);
+  }
+  return http.begin(url);
+}
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <DHT.h>
