@@ -664,8 +664,9 @@ static bool claimWithCode(const String& code) {
   serializeJson(body, payload);
 
   HTTPClient http;
+  WiFiClientSecure tls;
   LOG_INFO("claim", "POST %s", cfgClaimUrl.c_str());
-  http.begin(cfgClaimUrl);
+  beginHttp(http, tls, cfgClaimUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   http.setTimeout(10000);
@@ -740,8 +741,9 @@ static bool refreshConfig() {
   }
 
   HTTPClient http;
+  WiFiClientSecure tls;
   LOG_INFO("config", "GET %s", cfgConfigUrl.c_str());
-  http.begin(cfgConfigUrl);
+  beginHttp(http, tls, cfgConfigUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("x-ingest-key", cfgKey);
   http.addHeader("x-fw-version", FW_VERSION);
@@ -958,7 +960,8 @@ static void pollRelayState() {
   if (!hasRelay) return;
 
   HTTPClient http;
-  http.begin(cfgStateUrl);
+  WiFiClientSecure tls;
+  beginHttp(http, tls, cfgStateUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("x-ingest-key", cfgKey);
   http.setTimeout(5000);
@@ -1037,9 +1040,10 @@ static void collectAndPost() {
   serializeJson(doc, body);
 
   HTTPClient http;
+  WiFiClientSecure tls;
   LOG_INFO("post", "POST %s (%d readings, %d bytes)",
            cfgIngest.c_str(), (int)readings.size(), body.length());
-  http.begin(cfgIngest);
+  beginHttp(http, tls, cfgIngest);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-ingest-key", cfgKey);
