@@ -130,6 +130,12 @@ static void collectAndPost();
 static void startConfigPortal(bool onDemand);
 static void handleWiFiReconnect();
 
+// Watchdog
+static void setupWatchdog();
+static void pauseLoopWatchdog();
+static void resumeLoopWatchdog();
+static void feedWatchdog();
+
 // LED
 static void setLed(int s);
 static void updateLed();
@@ -180,6 +186,10 @@ static bool    hasConfigHash = false;
 
 // NTP sync flag
 static bool ntpSynced = false;
+
+// Task watchdog state. Newer ESP32 Arduino cores often initialize the TWDT
+// before setup(), so we must not assume esp_task_wdt_init() succeeds.
+static bool loopWatchdogAttached = false;
 
 // =============================================================================
 // Status LED — visual feedback for device state
@@ -384,10 +394,47 @@ static bool interruptibleDelay(unsigned long ms) {
   while (millis() - start < ms) {
     updateLed();
     if (checkPortalButtonHold()) return true;
-    esp_task_wdt_reset();  // feed watchdog during long waits
+    feedWatchdog();  // feed watchdog during long waits
     delay(20);
   }
   return false;
+}
+
+static void setupWatchdog() {
+  esp_task_wdt_config_t twdt_config = {
+    .timeout_ms = WDT_TIMEOUT_S * 1000,
+    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
+    .trigger_panic = true,
+  };
+
+  esp_err_t initResult = esp_task_wdt_init(&twdt_config);
+  if (initResult != ESP_OK && initResult != ESP_ERR_INVALID_STATE) {
+    LOG_WARN("wdt", "init failed: %d", initResult);
+  }
+
+  resumeLoopWatchdog();
+}
+
+static void pauseLoopWatchdog() {
+  if (!loopWatchdogAttached) return;
+  esp_err_t result = esp_task_wdt_delete(NULL);
+  if (result == ESP_OK || result == ESP_ERR_NOT_FOUND) {
+    loopWatchdogAttached = false;
+  }
+}
+
+static void resumeLoopWatchdog() {
+  if (loopWatchdogAttached) return;
+  esp_err_t result = esp_task_wdt_add(NULL);
+  if (result == ESP_OK || result == ESP_ERR_INVALID_STATE) {
+    loopWatchdogAttached = true;
+  }
+}
+
+static void feedWatchdog() {
+  if (loopWatchdogAttached) {
+    esp_task_wdt_reset();
+  }
 }
 
 // =============================================================================
@@ -567,8 +614,14 @@ static void startConfigPortal(bool onDemand) {
     WiFi.setHostname(cfgHostname.c_str());
   }
 
+  // WiFiManager's captive portal is blocking. If loopTask stays subscribed
+  // to the task watchdog while a phone is sitting on the portal page, the
+  // ESP32 reboots before the user can press Configure WiFi. Pause it only
+  // for the portal, then re-enable it for normal operation.
+  pauseLoopWatchdog();
   bool ok = onDemand ? wm.startConfigPortal(AP_NAME, AP_PASS)
                      : wm.autoConnect(AP_NAME, AP_PASS);
+  resumeLoopWatchdog();
   if (!ok) {
     if (onDemand) {
       // With timeout=0 this shouldn't happen, but guard anyway.
@@ -1115,14 +1168,9 @@ void setup() {
   pinMode(STATUS_LED_PIN, OUTPUT);
   setLed(LED_CONNECTING);
 
-  // Enable hardware watchdog timer
-  esp_task_wdt_config_t twdt_config = {
-    .timeout_ms = WDT_TIMEOUT_S * 1000,
-    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
-    .trigger_panic = true,
-  };
-  esp_task_wdt_init(&twdt_config);  // true = panic (reboot) on timeout
-  esp_task_wdt_add(NULL);  // add current task (loopTask) to WDT
+  // Enable hardware watchdog timer. The Arduino core may already have
+  // initialized it, so setupWatchdog() handles that case quietly.
+  setupWatchdog();
 
   // Load persistent config
   loadConfig();
@@ -1166,7 +1214,7 @@ void setup() {
 
 void loop() {
   // Feed the hardware watchdog
-  esp_task_wdt_reset();
+  feedWatchdog();
 
   // Update status LED
   updateLed();
