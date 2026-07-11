@@ -51,7 +51,11 @@ async function authDevice(req: Request) {
 
 async function handleRegister(req: Request) {
   let body: { mac?: string; fw_version?: string };
-  try { body = await req.json(); } catch { return json({ error: "invalid json" }, 400); }
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "invalid json" }, 400);
+  }
   const mac = normaliseMac(body?.mac);
   if (!mac) return json({ error: "mac required" }, 400);
   const fw_version = typeof body.fw_version === "string" ? body.fw_version : null;
@@ -83,10 +87,23 @@ async function handleIngest(req: Request) {
   const device = auth.device;
   if (device.status !== "approved") return json({ error: "pending approval" }, 403);
 
-  let body: { readings?: Array<{ sensor_id?: string; pin?: string; payload?: Record<string, number> }>; fw_version?: string };
-  try { body = await req.json(); } catch { return json({ error: "invalid json" }, 400); }
+  let body: {
+    readings?: Array<{ sensor_id?: string; pin?: string; payload?: Record<string, number> }>;
+    fw_version?: string;
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "invalid json" }, 400);
+  }
 
-  const readings = Array.isArray(body.readings) ? body.readings : [];
+  // Cap the batch so a compromised or buggy device can't push an unbounded
+  // insert in a single request.
+  const MAX_READINGS_PER_BATCH = 100;
+  const readings = (Array.isArray(body.readings) ? body.readings : []).slice(
+    0,
+    MAX_READINGS_PER_BATCH,
+  );
 
   // Look up sensors on this device so ESP32 firmware can post by `pin`
   // instead of hard-coding sensor UUIDs.
@@ -100,7 +117,11 @@ async function handleIngest(req: Request) {
   const rows: Array<{ sensor_id: string; user_id: string; payload: Record<string, unknown> }> = [];
   for (const r of readings) {
     if (!r || typeof r.payload !== "object" || r.payload === null) continue;
-    const match = r.sensor_id ? byId.get(r.sensor_id) : (r.pin ? byPin.get(String(r.pin)) : undefined);
+    const match = r.sensor_id
+      ? byId.get(r.sensor_id)
+      : r.pin
+        ? byPin.get(String(r.pin))
+        : undefined;
     if (!match) continue;
     rows.push({ sensor_id: match.id, user_id: match.user_id, payload: r.payload });
   }
@@ -137,7 +158,10 @@ async function handleConfig(req: Request) {
   const device = auth.device;
   if (device.status !== "approved") return json({ error: "pending approval" }, 403);
 
-  await supabase.from("devices").update({ last_seen: new Date().toISOString() }).eq("id", device.id);
+  await supabase
+    .from("devices")
+    .update({ last_seen: new Date().toISOString() })
+    .eq("id", device.id);
 
   const { data: sensors } = await supabase
     .from("sensors")
@@ -179,9 +203,9 @@ Deno.serve(async (req) => {
 
   try {
     if (sub === "/register" && req.method === "POST") return await handleRegister(req);
-    if (sub === "/ingest"   && req.method === "POST") return await handleIngest(req);
-    if (sub === "/config"   && req.method === "GET")  return await handleConfig(req);
-    if (sub === "/state"    && req.method === "GET")  return await handleState(req);
+    if (sub === "/ingest" && req.method === "POST") return await handleIngest(req);
+    if (sub === "/config" && req.method === "GET") return await handleConfig(req);
+    if (sub === "/state" && req.method === "GET") return await handleState(req);
     return json({ error: "not found", path: sub }, 404);
   } catch (e) {
     return json({ error: (e as Error).message }, 500);

@@ -324,6 +324,23 @@
   will-change: transform, opacity;
 }
 
+/* Entrance animations for cards, tiles and numeric views */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.animate-fade-in {
+  animation: fade-in var(--dur-slow) var(--ease-out-quint) both;
+}
+.animate-fade-in-up {
+  animation: fade-in-up 360ms var(--ease-out-quint) both;
+  will-change: transform, opacity;
+}
+
 /* Tone down heavy backdrop-filters to reduce paint cost */
 @supports (backdrop-filter: blur(1px)) {
   .glass-chip { backdrop-filter: blur(8px) saturate(140%); }
@@ -333,6 +350,7 @@
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-in, .animate-out, .page-transition,
+  .animate-fade-in, .animate-fade-in-up,
   [data-state="open"], [data-state="closed"] {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;

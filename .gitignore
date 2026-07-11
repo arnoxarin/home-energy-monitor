@@ -16,6 +16,11 @@ dist-ssr
 .nitro
 *.local
 
+# Env files (may hold secrets — anon key is safe, service-role is not)
+.env
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

@@ -5,13 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +39,6 @@ import {
 import {
   Activity,
   AlertTriangle,
-  Copy,
   LogOut,
   Menu,
   Plus,
@@ -112,18 +105,57 @@ interface Reading {
   payload: Record<string, number>;
 }
 
-const KIND_META: Record<SensorKind, { label: string; icon: React.ComponentType<{ className?: string }>; defaultView: SensorView; unit?: string; fields: string[] }> = {
-  pzem04: { label: "PZEM-04 (Power)", icon: Zap, defaultView: "graph", unit: "W", fields: ["voltage", "current", "power", "energy", "frequency", "pf"] },
-  dht22: { label: "DHT22 (Temp/Humidity)", icon: Thermometer, defaultView: "graph", unit: "°C", fields: ["temperature", "humidity"] },
+const KIND_META: Record<
+  SensorKind,
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    defaultView: SensorView;
+    unit?: string;
+    fields: string[];
+  }
+> = {
+  pzem04: {
+    label: "PZEM-04 (Power)",
+    icon: Zap,
+    defaultView: "graph",
+    unit: "W",
+    fields: ["voltage", "current", "power", "energy", "frequency", "pf"],
+  },
+  dht22: {
+    label: "DHT22 (Temp/Humidity)",
+    icon: Thermometer,
+    defaultView: "graph",
+    unit: "°C",
+    fields: ["temperature", "humidity"],
+  },
   relay: { label: "Relay / Switch", icon: Power, defaultView: "button", fields: [] },
   analog: { label: "Analog input", icon: Activity, defaultView: "graph", fields: ["value"] },
   digital: { label: "Digital input", icon: Cpu, defaultView: "numeric", fields: ["value"] },
-  ultrasonic: { label: "Ultrasonic (Distance)", icon: Waves, defaultView: "graph", unit: "cm", fields: ["distance"] },
-  radar: { label: "Radar", icon: Radar, defaultView: "graph", unit: "", fields: ["presence", "distance"] },
+  ultrasonic: {
+    label: "Ultrasonic (Distance)",
+    icon: Waves,
+    defaultView: "graph",
+    unit: "cm",
+    fields: ["distance"],
+  },
+  radar: {
+    label: "Radar",
+    icon: Radar,
+    defaultView: "graph",
+    unit: "",
+    fields: ["presence", "distance"],
+  },
 };
 
 type AlertConfig = { field?: string | null; min?: number | null; max?: number | null };
-type AlertStatus = { level: "low" | "high"; field: string; value: number; min: number | null; max: number | null } | null;
+type AlertStatus = {
+  level: "low" | "high";
+  field: string;
+  value: number;
+  min: number | null;
+  max: number | null;
+} | null;
 
 function evaluateAlert(sensor: Sensor, payload: Record<string, number> | undefined): AlertStatus {
   const alerts = (sensor.state as { alerts?: AlertConfig } | null)?.alerts;
@@ -131,7 +163,8 @@ function evaluateAlert(sensor: Sensor, payload: Record<string, number> | undefin
   const hasMin = typeof alerts.min === "number";
   const hasMax = typeof alerts.max === "number";
   if (!hasMin && !hasMax) return null;
-  const field = alerts.field && alerts.field in payload ? alerts.field : pickPrimaryField(sensor.kind, payload);
+  const field =
+    alerts.field && alerts.field in payload ? alerts.field : pickPrimaryField(sensor.kind, payload);
   const raw = payload[field];
   if (typeof raw !== "number" || Number.isNaN(raw)) return null;
   if (hasMax && raw > (alerts.max as number)) {
@@ -170,7 +203,12 @@ function Dashboard() {
   // prime the per-sensor cache entries. This eliminates the N+1 waterfall
   // where each SensorCard fired its own request on mount.
   const graphableIds = useMemo(
-    () => (sensorsQ.data ?? []).filter((s) => s.view !== "button").map((s) => s.id).sort().join(","),
+    () =>
+      (sensorsQ.data ?? [])
+        .filter((s) => s.view !== "button")
+        .map((s) => s.id)
+        .sort()
+        .join(","),
     [sensorsQ.data],
   );
   useQuery({
@@ -221,7 +259,6 @@ function Dashboard() {
             return next.length > 100 ? next.slice(next.length - 100) : next;
           });
         },
-
       )
       .subscribe();
     return () => {
@@ -256,6 +293,7 @@ function Dashboard() {
               <PopoverContent align="end" className="w-56 p-2">
                 <div className="flex flex-col gap-1 [&_button]:w-full [&_button]:justify-start [&_a]:w-full">
                   <FirmwareDialog />
+                  <ExportReadingsDialog sensors={sensorsQ.data ?? []} />
                   <Link to="/devices">
                     <Button variant="outline" size="sm">
                       <Plus className="mr-1 h-4 w-4" /> Manage devices
@@ -285,13 +323,16 @@ function Dashboard() {
         ) : (devicesQ.data ?? []).length === 0 ? (
           <EmptyState />
         ) : (
-          (devicesQ.data ?? []).map((d) => (
-            <DeviceSection
-              key={d.id}
-              device={d}
-              sensors={(sensorsQ.data ?? []).filter((s) => s.device_id === d.id)}
-            />
-          ))
+          <>
+            <SummaryBar devices={devicesQ.data ?? []} sensors={sensorsQ.data ?? []} />
+            {(devicesQ.data ?? []).map((d) => (
+              <DeviceSection
+                key={d.id}
+                device={d}
+                sensors={(sensorsQ.data ?? []).filter((s) => s.device_id === d.id)}
+              />
+            ))}
+          </>
         )}
       </main>
     </div>
@@ -324,7 +365,11 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
 
       const { data, error } = await q;
       if (error) throw error;
-      const rows = (data ?? []) as { sensor_id: string; ts: string; payload: Record<string, number> }[];
+      const rows = (data ?? []) as {
+        sensor_id: string;
+        ts: string;
+        payload: Record<string, number>;
+      }[];
       if (rows.length === 0) {
         toast.info("No readings in that range");
         return;
@@ -337,11 +382,18 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
 
       // Best-effort unit hints per payload field
       const FIELD_UNITS: Record<string, string> = {
-        voltage: "V", current: "A", power: "W", energy: "kWh",
-        frequency: "Hz", pf: "",
-        temperature: "°C", humidity: "%",
-        distance: "cm", speed: "m/s",
-        value: "", state: "",
+        voltage: "V",
+        current: "A",
+        power: "W",
+        energy: "kWh",
+        frequency: "Hz",
+        pf: "",
+        temperature: "°C",
+        humidity: "%",
+        distance: "cm",
+        speed: "m/s",
+        value: "",
+        state: "",
       };
       const fieldHeader = (f: string) => {
         const u = FIELD_UNITS[f];
@@ -349,7 +401,11 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
       };
 
       const header = [
-        "timestamp", "sensor_id", "sensor_name", "sensor_kind", "sensor_unit",
+        "timestamp",
+        "sensor_id",
+        "sensor_name",
+        "sensor_kind",
+        "sensor_unit",
         ...fields.map(fieldHeader),
       ];
       const dataRows = rows.map((r) => {
@@ -364,7 +420,10 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
         ];
       });
 
-      const label = sensorId === "__all__" ? "all-sensors" : (sensorById.get(sensorId)?.name ?? "sensor").replace(/\s+/g, "_");
+      const label =
+        sensorId === "__all__"
+          ? "all-sensors"
+          : (sensorById.get(sensorId)?.name ?? "sensor").replace(/\s+/g, "_");
       const baseName = `readings_${label}_${start}_to_${end}`;
 
       let blob: Blob;
@@ -383,7 +442,9 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Readings");
         const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
-        blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        blob = new Blob([buf], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
         filename = `${baseName}.xlsx`;
       } else {
         const escape = (v: unknown) => {
@@ -428,11 +489,15 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
           <div className="space-y-2">
             <Label>Sensor</Label>
             <Select value={sensorId} onValueChange={setSensorId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All sensors</SelectItem>
                 {sensors.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -440,17 +505,30 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Start date</Label>
-              <Input type="date" value={start} max={end} onChange={(e) => setStart(e.target.value)} />
+              <Input
+                type="date"
+                value={start}
+                max={end}
+                onChange={(e) => setStart(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label>End date</Label>
-              <Input type="date" value={end} min={start} max={today} onChange={(e) => setEnd(e.target.value)} />
+              <Input
+                type="date"
+                value={end}
+                min={start}
+                max={today}
+                onChange={(e) => setEnd(e.target.value)}
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label>Format</Label>
             <Select value={format} onValueChange={(v) => setFormat(v as "csv" | "xlsx")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="csv">CSV (.csv)</SelectItem>
                 <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
@@ -468,6 +546,73 @@ function ExportReadingsDialog({ sensors }: { sensors: Sensor[] }) {
   );
 }
 
+function SummaryBar({ devices, sensors }: { devices: Device[]; sensors: Sensor[] }) {
+  const qc = useQueryClient();
+
+  // Recomputed each render; the parent re-renders on realtime reading inserts
+  // and the device poll, so these figures stay reasonably fresh.
+  const now = Date.now();
+  const online = devices.filter(
+    (d) => d.last_seen && now - new Date(d.last_seen).getTime() < 120_000,
+  ).length;
+
+  const activeAlerts = sensors.reduce((count, s) => {
+    if (s.view === "button") return count;
+    const readings = qc.getQueryData<Reading[]>(["readings", s.id]);
+    const latest = readings?.[readings.length - 1];
+    return evaluateAlert(s, latest?.payload) ? count + 1 : count;
+  }, 0);
+
+  const stats: {
+    label: string;
+    value: number;
+    icon: React.ComponentType<{ className?: string }>;
+    tone: string;
+  }[] = [
+    { label: "Devices", value: devices.length, icon: Cpu, tone: "text-primary" },
+    {
+      label: "Online",
+      value: online,
+      icon: Activity,
+      tone: online > 0 ? "text-emerald-500" : "text-muted-foreground",
+    },
+    { label: "Sensors", value: sensors.length, icon: Zap, tone: "text-primary" },
+    {
+      label: "Active alerts",
+      value: activeAlerts,
+      icon: AlertTriangle,
+      tone: activeAlerts > 0 ? "text-destructive" : "text-muted-foreground",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {stats.map((s, i) => {
+        const Icon = s.icon;
+        return (
+          <Card
+            key={s.label}
+            className="animate-fade-in-up border-border/60"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
+            <CardContent className="flex items-center gap-3 p-4">
+              <div
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-muted ${s.tone}`}
+              >
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-2xl font-bold leading-none tabular-nums">{s.value}</p>
+                <p className="truncate text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <Card>
@@ -480,7 +625,9 @@ function EmptyState() {
       </CardHeader>
       <CardContent>
         <Link to="/devices">
-          <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Open Devices</Button>
+          <Button size="sm">
+            <Plus className="mr-1 h-4 w-4" /> Open Devices
+          </Button>
         </Link>
       </CardContent>
     </Card>
@@ -499,7 +646,15 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
     }
   }, [compact]);
   const [editing, setEditing] = useState(false);
-
+  const [showGraph, setShowGraph] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(`dashboard-graph:${device.id}`) === "1";
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(`dashboard-graph:${device.id}`, showGraph ? "1" : "0");
+    }
+  }, [showGraph, device.id]);
 
   const deleteDevice = useMutation({
     mutationFn: async () => {
@@ -520,22 +675,18 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
           <h2 className="text-xl font-semibold flex flex-wrap items-center gap-2">
             <DeviceStatusDot lastSeenAt={device.last_seen} />
             {device.name || device.mac}
-            <TelemetryStatus
-              sensorIds={sensors.map((s) => s.id)}
-              lastSeenAt={device.last_seen}
-            />
-            <FirmwareBadge
-              version={device.fw_version}
-              build={null}
-              reportedAt={null}
-            />
+            <TelemetryStatus sensorIds={sensors.map((s) => s.id)} lastSeenAt={device.last_seen} />
+            <FirmwareBadge version={device.fw_version} build={null} reportedAt={null} />
             <LastSeenBadge lastSeenAt={device.last_seen} />
           </h2>
           <p className="text-xs text-muted-foreground">
             MAC <code className="font-mono">{device.mac}</code>
-            {device.last_seen ? <> · Last seen {new Date(device.last_seen).toLocaleString()}</> : " · Never seen"}
+            {device.last_seen ? (
+              <> · Last seen {new Date(device.last_seen).toLocaleString()}</>
+            ) : (
+              " · Never seen"
+            )}
           </p>
-
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to="/sensors/new">
@@ -543,6 +694,17 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
               <Plus className="mr-1 h-4 w-4" /> Add sensor
             </Button>
           </Link>
+          {sensors.some((s) => s.view !== "button") && (
+            <Button
+              variant={showGraph ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowGraph((v) => !v)}
+              title="Toggle live graph panel"
+            >
+              <Activity className="mr-1 h-4 w-4" />
+              {showGraph ? "Hide graph" : "Live graph"}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -561,7 +723,12 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
             <Pencil className="mr-1 h-4 w-4" />
             {editing ? "Done" : "Edit layout"}
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => deleteDevice.mutate()} title="Delete device">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => deleteDevice.mutate()}
+            title="Delete device"
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -571,7 +738,11 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
         <p className="text-sm text-muted-foreground">No sensors yet. Add one to get started.</p>
       ) : (
         <>
-
+          {showGraph && (
+            <div className="animate-fade-in-up">
+              <SensorGraphPanel sensors={sensors} />
+            </div>
+          )}
           <SortableSensorGrid
             storageKey={`sensor-layout:${device.id}`}
             sensors={sensors}
@@ -580,27 +751,7 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
           />
         </>
       )}
-
-
-
-
     </section>
-  );
-}
-
-function CopyBtn({ value }: { value: string }) {
-  return (
-    <Button
-      size="icon"
-      variant="ghost"
-      className="h-6 w-6"
-      onClick={() => {
-        navigator.clipboard.writeText(value);
-        toast.success("Copied");
-      }}
-    >
-      <Copy className="h-3 w-3" />
-    </Button>
   );
 }
 
@@ -658,17 +809,25 @@ function AddSensorDialog({ deviceId }: { deviceId: string }) {
           <div className="space-y-1.5">
             <Label>Sensor type</Label>
             <Select value={kind} onValueChange={(v) => setKind(v as SensorKind)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {(Object.keys(KIND_META) as SensorKind[]).map((k) => (
-                  <SelectItem key={k} value={k}>{KIND_META[k].label}</SelectItem>
+                  <SelectItem key={k} value={k}>
+                    {KIND_META[k].label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={KIND_META[kind].label} />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={KIND_META[kind].label}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Pin / identifier</Label>
@@ -678,7 +837,9 @@ function AddSensorDialog({ deviceId }: { deviceId: string }) {
           <div className="space-y-1.5">
             <Label>Display as</Label>
             <Select value={view} onValueChange={(v) => setView(v as SensorView)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="graph">Graph</SelectItem>
                 <SelectItem value="numeric">Numeric</SelectItem>
@@ -688,7 +849,9 @@ function AddSensorDialog({ deviceId }: { deviceId: string }) {
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending}>Create sensor</Button>
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending}>
+            Create sensor
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -710,12 +873,24 @@ function SortableSensorGrid({
   const cols = isMobile ? 4 : compact ? 12 : 7;
   const defaultSize = (view: SensorView) => {
     if (isMobile) {
-      return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 4, h: 2 } : { w: 4, h: 3 };
+      return view === "button"
+        ? { w: 2, h: 2 }
+        : view === "numeric"
+          ? { w: 4, h: 2 }
+          : { w: 4, h: 3 };
     }
     if (compact) {
-      return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 3, h: 3 } : { w: 4, h: 3 };
+      return view === "button"
+        ? { w: 2, h: 2 }
+        : view === "numeric"
+          ? { w: 3, h: 3 }
+          : { w: 4, h: 3 };
     }
-    return view === "button" ? { w: 2, h: 2 } : view === "numeric" ? { w: 2, h: 2 } : { w: 3, h: 3 };
+    return view === "button"
+      ? { w: 2, h: 2 }
+      : view === "numeric"
+        ? { w: 2, h: 2 }
+        : { w: 3, h: 3 };
   };
 
   const [layout, setLayout] = useState<Layout[]>(() => {
@@ -796,10 +971,7 @@ function SortableSensorGrid({
   );
 }
 
-
-
 function SensorCard({ sensor }: { sensor: Sensor }) {
-
   const qc = useQueryClient();
   const Icon = KIND_META[sensor.kind].icon;
 
@@ -850,7 +1022,9 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
     },
     onSuccess: () => {
       const snapshot: Sensor = { ...sensor };
-      qc.setQueryData<Sensor[]>(["sensors"], (prev) => (prev ?? []).filter((s) => s.id !== sensor.id));
+      qc.setQueryData<Sensor[]>(["sensors"], (prev) =>
+        (prev ?? []).filter((s) => s.id !== sensor.id),
+      );
       qc.invalidateQueries({ queryKey: ["sensors"] });
       const freed = [
         sensor.pin,
@@ -876,7 +1050,7 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
 
   return (
     <div
-      className={`glass-tile group h-full w-full flex flex-col p-2 text-xs ${on ? "glass-tile-on" : ""} ${
+      className={`glass-tile group h-full w-full flex flex-col p-2 text-xs animate-fade-in ${on ? "glass-tile-on" : ""} ${
         alert ? "ring-2 ring-destructive/70 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]" : ""
       }`}
     >
@@ -896,7 +1070,9 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
               ) : null}
             </p>
             {!isButton && (
-              <p className={`truncate text-[10px] uppercase tracking-wide ${on ? "tile-on-muted" : "tile-muted"}`}>
+              <p
+                className={`truncate text-[10px] uppercase tracking-wide ${on ? "tile-on-muted" : "tile-muted"}`}
+              >
                 {KIND_META[sensor.kind].label}
               </p>
             )}
@@ -923,7 +1099,13 @@ function SensorCard({ sensor }: { sensor: Sensor }) {
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
             </Link>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteSensor.mutate()} title="Delete sensor">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => deleteSensor.mutate()}
+              title="Delete sensor"
+            >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -1000,7 +1182,9 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
   const availableFields = latest ? Object.keys(latest.payload) : [];
 
   const data = readings.map((r, i) => ({
-    t: r.ts ? new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : String(i),
+    t: r.ts
+      ? new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : String(i),
     v: Number(r.payload?.[activeField] ?? 0),
   }));
   const flat = Array.from({ length: 10 }, (_, i) => ({ t: String(i), v: 0 }));
@@ -1014,9 +1198,13 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
             {latest && typeof latest.payload[activeField] === "number"
               ? (latest.payload[activeField] as number).toFixed(2)
               : "0.00"}
-            {sensor.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span> : null}
+            {sensor.unit ? (
+              <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span>
+            ) : null}
           </p>
-          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{activeField}</p>
+          <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+            {activeField}
+          </p>
         </div>
         {availableFields.length > 1 && (
           <div className="flex flex-wrap justify-end gap-1 max-w-[55%]">
@@ -1025,7 +1213,10 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
                 key={f}
                 variant={f === activeField ? "default" : "outline"}
                 className="cursor-pointer px-1.5 py-0 text-[9px] backdrop-blur-md transition-transform hover:scale-105"
-                onClick={(e) => { e.stopPropagation(); setSelected(f); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelected(f);
+                }}
               >
                 {f}
               </Badge>
@@ -1039,7 +1230,14 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
             <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
             <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
             <YAxis tick={{ fontSize: 9 }} width={28} domain={latest ? ["auto", "auto"] : [0, 1]} />
-            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
+            <Tooltip
+              contentStyle={{
+                fontSize: 12,
+                borderRadius: 8,
+                backdropFilter: "blur(8px)",
+                background: "color-mix(in oklab, var(--color-card) 80%, transparent)",
+              }}
+            />
             <Line
               type="monotone"
               dataKey="v"
@@ -1054,22 +1252,30 @@ function NumericView({ sensor, readings }: { sensor: Sensor; readings: Reading[]
           </LineChart>
         </ResponsiveContainer>
       </div>
-      {!latest && <p className="mt-1 text-[10px] text-muted-foreground text-center">Waiting for data…</p>}
+      {!latest && (
+        <p className="mt-1 text-[10px] text-muted-foreground text-center">Waiting for data…</p>
+      )}
     </div>
   );
 }
 
-
 function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }) {
   const latest = readings[readings.length - 1];
-  const field = useMemo(() => (latest ? pickPrimaryField(sensor.kind, latest.payload) : "value"), [latest, sensor.kind]);
+  const field = useMemo(
+    () => (latest ? pickPrimaryField(sensor.kind, latest.payload) : "value"),
+    [latest, sensor.kind],
+  );
   const [selected, setSelected] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const activeField = selected ?? field;
   const availableFields = latest ? Object.keys(latest.payload) : [];
 
   const data = readings.map((r) => ({
-    t: new Date(r.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    t: new Date(r.ts).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
     v: Number(r.payload?.[activeField] ?? 0),
   }));
 
@@ -1100,7 +1306,14 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
                 <XAxis dataKey="t" hide />
                 <YAxis domain={[0, 1]} tick={{ fontSize: 9 }} width={28} />
-                <Line type="monotone" dataKey="v" stroke="var(--chart-line-muted)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line
+                  type="monotone"
+                  dataKey="v"
+                  stroke="var(--chart-line-muted)"
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1116,7 +1329,6 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
     );
   }
 
-
   return (
     <>
       <div
@@ -1131,9 +1343,15 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
               {typeof latest.payload[activeField] === "number"
                 ? (latest.payload[activeField] as number).toFixed(2)
                 : "—"}
-              {sensor.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">{sensor.unit}</span> : null}
+              {sensor.unit ? (
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  {sensor.unit}
+                </span>
+              ) : null}
             </p>
-            <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{activeField}</p>
+            <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+              {activeField}
+            </p>
           </div>
           {availableFields.length > 1 && (
             <div className="flex flex-wrap justify-end gap-1 max-w-[55%]">
@@ -1143,7 +1361,10 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
                   data-graph-badge
                   variant={f === activeField ? "default" : "outline"}
                   className="cursor-pointer px-1.5 py-0 text-[9px] backdrop-blur-md"
-                  onClick={(e) => { e.stopPropagation(); setSelected(f); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected(f);
+                  }}
                 >
                   {f}
                 </Badge>
@@ -1157,8 +1378,22 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis dataKey="t" tick={{ fontSize: 9 }} hide />
               <YAxis tick={{ fontSize: 9 }} width={28} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, backdropFilter: "blur(8px)", background: "color-mix(in oklab, var(--color-card) 80%, transparent)" }} />
-              <Line type="monotone" dataKey="v" stroke="var(--color-primary)" dot={false} strokeWidth={2} isAnimationActive={false} />
+              <Tooltip
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 8,
+                  backdropFilter: "blur(8px)",
+                  background: "color-mix(in oklab, var(--color-card) 80%, transparent)",
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="v"
+                stroke="var(--color-primary)"
+                dot={false}
+                strokeWidth={2}
+                isAnimationActive={false}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1173,13 +1408,9 @@ function GraphView({ sensor, readings }: { sensor: Sensor; readings: Reading[] }
   );
 }
 
-
 // ---- Dynamic graph panel: pick any graphable sensor and see its live history ----
 function SensorGraphPanel({ sensors }: { sensors: Sensor[] }) {
-  const graphable = useMemo(
-    () => sensors.filter((s) => s.view !== "button"),
-    [sensors],
-  );
+  const graphable = useMemo(() => sensors.filter((s) => s.view !== "button"), [sensors]);
   const [sensorId, setSensorId] = useState<string | null>(null);
   const active = useMemo(() => {
     if (!graphable.length) return null;
@@ -1250,9 +1481,7 @@ function SensorGraphPanel({ sensors }: { sensors: Sensor[] }) {
               {graphable.map((s) => (
                 <SelectItem key={s.id} value={s.id} className="text-xs">
                   {s.name}
-                  <span className="ml-1 text-muted-foreground">
-                    · {KIND_META[s.kind].label}
-                  </span>
+                  <span className="ml-1 text-muted-foreground">· {KIND_META[s.kind].label}</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1275,14 +1504,37 @@ function SensorGraphPanel({ sensors }: { sensors: Sensor[] }) {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="mb-3 flex flex-wrap gap-4 text-xs tile-muted">
-          <span>latest <span className="font-semibold text-foreground">{values.at(-1)?.toFixed(2) ?? "—"}{unit && ` ${unit}`}</span></span>
-          <span>min <span className="font-semibold text-foreground">{values.length ? min.toFixed(2) : "—"}</span></span>
-          <span>max <span className="font-semibold text-foreground">{values.length ? max.toFixed(2) : "—"}</span></span>
+          <span>
+            latest{" "}
+            <span className="font-semibold text-foreground">
+              {values.at(-1)?.toFixed(2) ?? "—"}
+              {unit && ` ${unit}`}
+            </span>
+          </span>
+          <span>
+            min{" "}
+            <span className="font-semibold text-foreground">
+              {values.length ? min.toFixed(2) : "—"}
+            </span>
+          </span>
+          <span>
+            max{" "}
+            <span className="font-semibold text-foreground">
+              {values.length ? max.toFixed(2) : "—"}
+            </span>
+          </span>
         </div>
         <div className="relative h-[260px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
-              data={chartData.length ? chartData : [{ t: "", v: 0 }, { t: " ", v: 0 }]}
+              data={
+                chartData.length
+                  ? chartData
+                  : [
+                      { t: "", v: 0 },
+                      { t: " ", v: 0 },
+                    ]
+              }
               margin={{ top: 8, right: 12, left: -12, bottom: 0 }}
             >
               <defs>
@@ -1296,7 +1548,12 @@ function SensorGraphPanel({ sensors }: { sensors: Sensor[] }) {
               <YAxis tick={{ fontSize: 11 }} width={40} />
               {chartData.length > 0 && (
                 <Tooltip
-                  cursor={{ stroke: "var(--color-primary)", strokeWidth: 1, strokeDasharray: "4 4", opacity: 0.7 }}
+                  cursor={{
+                    stroke: "var(--color-primary)",
+                    strokeWidth: 1,
+                    strokeDasharray: "4 4",
+                    opacity: 0.7,
+                  }}
                   wrapperStyle={{ outline: "none" }}
                   contentStyle={{
                     background: "var(--color-card)",
