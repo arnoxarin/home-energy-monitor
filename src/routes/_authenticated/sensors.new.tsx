@@ -4,7 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Activity, ArrowLeft } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -21,9 +27,10 @@ export const Route = createFileRoute("/_authenticated/sensors/new")({
   component: NewSensorPage,
 });
 
-interface Device { id: string; name: string; }
-
-
+interface Device {
+  id: string;
+  name: string;
+}
 
 function NewSensorPage() {
   const navigate = useNavigate();
@@ -67,7 +74,6 @@ function NewSensorPage() {
     };
   }, [qc]);
 
-
   const [deviceId, setDeviceId] = useState<string>("");
   const [kind, setKind] = useState<SensorKind>("pzem04");
   const [name, setName] = useState("");
@@ -93,8 +99,6 @@ function NewSensorPage() {
 
   const usedPins = useMemo(() => new Set(pinOwners.keys()), [pinOwners]);
 
-
-
   useEffect(() => {
     setView(meta.defaultView);
     setUnit(meta.unit ?? "");
@@ -112,7 +116,10 @@ function NewSensorPage() {
       let changed = false;
       const next: Partial<Record<PinRoleKey, string>> = { ...prev };
       for (const [k, v] of Object.entries(prev)) {
-        if (v && usedPins.has(v)) { delete next[k as PinRoleKey]; changed = true; }
+        if (v && usedPins.has(v)) {
+          delete next[k as PinRoleKey];
+          changed = true;
+        }
       }
       return changed ? next : prev;
     });
@@ -126,7 +133,6 @@ function NewSensorPage() {
         .filter(([k, v]) => k !== roleKey && v)
         .map(([, v]) => v as string),
     );
-
 
   const save = useMutation({
     mutationFn: async () => {
@@ -142,7 +148,10 @@ function NewSensorPage() {
         else if (chosen.includes(v)) errs[`pin.${role.key}`] = "Pin already used above";
         else chosen.push(v);
       }
-      if (Object.keys(errs).length > 0) { setErrors(errs); throw new Error("Fix the highlighted fields"); }
+      if (Object.keys(errs).length > 0) {
+        setErrors(errs);
+        throw new Error("Fix the highlighted fields");
+      }
       setErrors({});
 
       const { data: userData } = await supabase.auth.getUser();
@@ -157,14 +166,14 @@ function NewSensorPage() {
         pin: primaryPin, // used to match incoming readings by identifier
         view,
         unit: unit.trim() ? unit.trim() : null,
-        state: kind === "relay"
-          ? { on: false, pins }
-          : { pins },
+        state: kind === "relay" ? { on: false, pins } : { pins },
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sensors"] });
+    onSuccess: async () => {
+      // Refetch the sensors list before leaving so the dashboard mounts with
+      // the new sensor already present instead of racing an empty cache.
+      await qc.invalidateQueries({ queryKey: ["sensors"] });
       toast.success("Sensor saved");
       navigate({ to: "/dashboard" });
     },
@@ -197,22 +206,26 @@ function NewSensorPage() {
         .order("ts", { ascending: false })
         .limit(20);
       if (error) throw error;
-      return (data ?? []).reverse() as { id: number; ts: string; payload: Record<string, number> }[];
+      return (data ?? []).reverse() as {
+        id: number;
+        ts: string;
+        payload: Record<string, number>;
+      }[];
     },
     staleTime: 30_000,
   });
 
   const mockedPayload = useMemo(() => MOCK_PAYLOADS[kind] ?? { value: 0 }, [kind]);
   const realReadings = previewQ.data ?? [];
-  const previewReadings = realReadings.length > 0
-    ? realReadings
-    : Array.from({ length: 10 }, (_, i) => ({
-        id: i,
-        ts: new Date(Date.now() - (9 - i) * 5000).toISOString(),
-        payload: jitterPayload(mockedPayload, i),
-      }));
+  const previewReadings =
+    realReadings.length > 0
+      ? realReadings
+      : Array.from({ length: 10 }, (_, i) => ({
+          id: i,
+          ts: new Date(Date.now() - (9 - i) * 5000).toISOString(),
+          payload: jitterPayload(mockedPayload, i),
+        }));
   const isMocked = realReadings.length === 0;
-
 
   return (
     <div
@@ -281,7 +294,9 @@ function NewSensorPage() {
                       />
                       <div>
                         <p className="text-sm font-medium leading-tight">{m.label}</p>
-                        <p className="mt-0.5 text-[11px] leading-snug text-[#7A8794]">{m.description}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-[#7A8794]">
+                          {m.description}
+                        </p>
                       </div>
                     </label>
                   );
@@ -383,7 +398,9 @@ function NewSensorPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {(devicesQ.data ?? []).map((d) => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -474,9 +491,7 @@ function NewSensorPage() {
                             style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace" }}
                           >
                             <SelectValue
-                              placeholder={
-                                available.length === 0 ? "No free pins" : "Select GPIO"
-                              }
+                              placeholder={available.length === 0 ? "No free pins" : "Select GPIO"}
                             />
                           </SelectTrigger>
                           <SelectContent>
@@ -532,7 +547,11 @@ function NewSensorPage() {
                     <SelectContent>
                       {meta.allowedViews.map((v) => (
                         <SelectItem key={v} value={v}>
-                          {v === "graph" ? "Graph" : v === "numeric" ? "Numeric" : "Button (output)"}
+                          {v === "graph"
+                            ? "Graph"
+                            : v === "numeric"
+                              ? "Numeric"
+                              : "Button (output)"}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -571,7 +590,6 @@ function NewSensorPage() {
             </div>
           </div>
         </div>
-
       </main>
     </div>
   );
@@ -639,10 +657,14 @@ function TilePreview({
           <div className="flex h-full flex-col justify-between">
             {primary && (
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{primary[0]}</p>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {primary[0]}
+                </p>
                 <p className="text-3xl font-bold leading-tight">
                   {typeof primary[1] === "number" ? primary[1].toFixed(2) : String(primary[1])}
-                  {unit ? <span className="ml-1 text-sm font-normal text-muted-foreground">{unit}</span> : null}
+                  {unit ? (
+                    <span className="ml-1 text-sm font-normal text-muted-foreground">{unit}</span>
+                  ) : null}
                 </p>
               </div>
             )}
@@ -683,11 +705,7 @@ function Sparkline({
       {values.map((v, i) => {
         const h = ((v - min) / range) * 90 + 10;
         return (
-          <div
-            key={i}
-            className="flex-1 rounded-sm bg-primary/50"
-            style={{ height: `${h}%` }}
-          />
+          <div key={i} className="flex-1 rounded-sm bg-primary/50" style={{ height: `${h}%` }} />
         );
       })}
     </div>
@@ -712,5 +730,3 @@ function jitterPayload(base: Record<string, number>, i: number): Record<string, 
   }
   return out;
 }
-
-

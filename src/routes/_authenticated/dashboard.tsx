@@ -44,6 +44,8 @@ import {
   Plus,
   Trash2,
   Pencil,
+  Check,
+  X,
   Zap,
   Thermometer,
   Power,
@@ -325,10 +327,11 @@ function Dashboard() {
         ) : (
           <>
             <SummaryBar devices={devicesQ.data ?? []} sensors={sensorsQ.data ?? []} />
-            {(devicesQ.data ?? []).map((d) => (
+            {(devicesQ.data ?? []).map((d, i) => (
               <DeviceSection
                 key={d.id}
                 device={d}
+                index={i}
                 sensors={(sensorsQ.data ?? []).filter((s) => s.device_id === d.id)}
               />
             ))}
@@ -634,7 +637,15 @@ function EmptyState() {
   );
 }
 
-function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] }) {
+function DeviceSection({
+  device,
+  index,
+  sensors,
+}: {
+  device: Device;
+  index: number;
+  sensors: Sensor[];
+}) {
   const qc = useQueryClient();
   const [compact, setCompact] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -668,13 +679,94 @@ function DeviceSection({ device, sensors }: { device: Device; sensors: Sensor[] 
     },
   });
 
+  // Friendly fallback so a freshly-registered board reads "ESP 1", "ESP 2"…
+  // instead of a raw MAC address. Persisted names still win.
+  const fallbackName = `ESP ${index + 1}`;
+  const displayName = device.name?.trim() || fallbackName;
+
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState(displayName);
+
+  const renameDevice = useMutation({
+    mutationFn: async () => {
+      const next = draftName.trim();
+      const { error } = await supabase
+        .from("devices")
+        .update({ name: next || null })
+        .eq("id", device.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["devices"] });
+      toast.success("Renamed");
+      setRenaming(false);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-xl font-semibold flex flex-wrap items-center gap-2">
             <DeviceStatusDot lastSeenAt={device.last_seen} />
-            {device.name || device.mac}
+            {renaming ? (
+              <span className="flex items-center gap-1">
+                <Input
+                  autoFocus
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") renameDevice.mutate();
+                    if (e.key === "Escape") {
+                      setDraftName(displayName);
+                      setRenaming(false);
+                    }
+                  }}
+                  maxLength={60}
+                  placeholder={fallbackName}
+                  className="h-8 w-44 text-base"
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-emerald-600"
+                  onClick={() => renameDevice.mutate()}
+                  disabled={renameDevice.isPending}
+                  title="Save name"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    setDraftName(displayName);
+                    setRenaming(false);
+                  }}
+                  title="Cancel"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </span>
+            ) : (
+              <span className="group/name flex items-center gap-1">
+                {displayName}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-muted-foreground opacity-60 transition-opacity hover:opacity-100"
+                  onClick={() => {
+                    setDraftName(device.name?.trim() || "");
+                    setRenaming(true);
+                  }}
+                  title="Rename device"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </span>
+            )}
             <TelemetryStatus sensorIds={sensors.map((s) => s.id)} lastSeenAt={device.last_seen} />
             <FirmwareBadge version={device.fw_version} build={null} reportedAt={null} />
             <LastSeenBadge lastSeenAt={device.last_seen} />
@@ -908,6 +1000,17 @@ function SortableSensorGrid({
       window.localStorage.setItem(storageKey, JSON.stringify(layout));
     }
   }, [layout, storageKey]);
+
+  // Drop layout entries for sensors that no longer exist (e.g. after a delete)
+  // so the leftover slot doesn't linger and vertical compaction can pull the
+  // remaining tiles up to fill the gap.
+  useEffect(() => {
+    setLayout((prev) => {
+      const ids = new Set(sensors.map((s) => s.id));
+      const pruned = prev.filter((l) => ids.has(l.i));
+      return pruned.length === prev.length ? prev : pruned;
+    });
+  }, [sensors]);
 
   // Merge saved layout with sensors: keep saved positions, append new sensors.
   // On mobile, ignore the saved (desktop) layout and lay tiles out fresh so
