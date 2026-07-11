@@ -1,25 +1,27 @@
-// Voltwatch ESP32 firmware v2.0.0 — complete rewrite
+// Voltwatch ESP32 firmware v2.1.0 — Supabase device API
 // =============================================================================
+//
+// No more ingest keys or pairing codes. The device now talks straight to a
+// Supabase Edge Function (the lovable.app host rejects the ESP32's TLS
+// handshake; *.supabase.co works reliably with embedded TLS).
 //
 // First boot:
 //   - The ESP32 has no saved WiFi, so it starts its own access point
 //     "Voltwatch-Setup" (password: voltwatch).
-//   - Connect your phone to it. A captive portal opens.
-//   - Enter your home WiFi. Then EITHER:
-//       (a) type a 6-digit pairing code from the dashboard
-//           ("Pair new device"), OR
-//       (b) type the ingest URL and device key manually.
-//     Save. It reboots.
+//   - Connect your phone to it, enter your home WiFi, save. It reboots.
+//   - The device then registers itself with the server using its MAC
+//     address and silently stores the device token it receives.
+//   - Open the dashboard's Devices page and press "Approve" on the new
+//     device. Done — data starts flowing.
 //
 // After that:
-//   - The firmware pulls the current sensor list from the app
-//     (GET /api/public/config with the same ingest key) every ~15s.
-//     When you add, remove, edit a sensor, or change a pin in the
-//     dashboard, the ESP picks it up automatically. No re-flashing.
-//   - Relay states from the dashboard are polled via /api/public/state
-//     and also returned in every ingest response.
+//   - The firmware pulls the current sensor list (GET {base}/config)
+//     every ~15s. When you add, remove, edit a sensor, or change a pin
+//     in the dashboard, the ESP picks it up automatically. No re-flashing.
+//   - Relay states from the dashboard are polled via {base}/state and
+//     also returned in every ingest response.
 //
-// To change WiFi / endpoint / key later:
+// To change WiFi later:
 //   - Hold BOOT (GPIO 0) for ~3s. Portal reopens.
 //
 // Required libraries (Arduino IDE > Library Manager):
@@ -44,10 +46,12 @@ static bool beginHttp(HTTPClient& http, WiFiClientSecure& tls, const String& url
   }
   return http.begin(url);
 }
+
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <DHT.h>
 #include <esp_task_wdt.h>
+#include <esp_sntp.h>
 #include <time.h>
 #include <mbedtls/md.h>
 
@@ -55,15 +59,15 @@ static bool beginHttp(HTTPClient& http, WiFiClientSecure& tls, const String& url
 // Compile-time constants
 // =============================================================================
 
-#define FW_VERSION "2.0.0"
+#define FW_VERSION "2.1.0"
 #define FW_BUILD   __DATE__ " " __TIME__
 
-// The dashboard auto-substitutes these when you download the .ino for a
-// specific device. When placeholders remain (values starting with "__"),
-// the captive portal prompts for them.
-#define DEFAULT_INGEST_URL "https://project--c8ab56ed-ab9f-4b4a-b700-c695543bf1e4-dev.lovable.app/api/public/ingest"
-#define DEFAULT_INGEST_KEY "73867fd574b52124d8b832d3afcd97ee4b703b0c017f654e"
-#define DEFAULT_CLAIM_URL  "https://project--c8ab56ed-ab9f-4b4a-b700-c695543bf1e4-dev.lovable.app/api/public/claim"
+// Supabase Edge Function base URL — every device endpoint lives under it:
+//   POST {base}/register  {mac, fw_version}              -> {device_token, status}
+//   GET  {base}/config    Authorization: Bearer <token>  -> {sensors:[...]}
+//   GET  {base}/state     Authorization: Bearer <token>  -> {relays:[...]}
+//   POST {base}/ingest    Authorization: Bearer <token>  -> {relays:[...]}
+#define API_BASE_URL "https://ggprcbatjelodqmgvxgs.supabase.co/functions/v1/device-api"
 
 // ---------- Pin assignments ----------
 static constexpr int PORTAL_BUTTON_PIN = 0;   // BOOT button on most devkits
@@ -78,6 +82,7 @@ static constexpr unsigned long WIFI_RECONNECT_MAX_MS    = 60000;   // max WiFi r
 static constexpr unsigned long PORTAL_TIMEOUT_S         = 300;     // captive portal timeout
 static constexpr unsigned long BOOT_HOLD_MS             = 3000;    // hold BOOT for 3s to open portal
 static constexpr unsigned long WDT_TIMEOUT_S            = 30;      // watchdog timeout in seconds
+static constexpr unsigned long NTP_RETRY_INTERVAL_MS    = 300000;  // retry NTP every 5 min until synced
 
 // ---------- Limits ----------
 static constexpr int MAX_SENSORS        = 12;
@@ -105,8 +110,8 @@ static bool isPlaceholder(const String& s);
 static String sanitizeHostname(const String& in);
 static void loadConfig();
 
-// Pairing
-static bool claimWithCode(const String& code);
+// Device registration
+static bool registerDevice();
 
 // Sensors
 static int  parsePin(const char* s);
@@ -163,17 +168,23 @@ static void checkHeap();
 static Preferences prefs;
 
 // Config strings
-static String cfgIngest;      // .../api/public/ingest
-static String cfgKey;         // device ingest key
-static String cfgConfigUrl;   // derived: .../api/public/config
-static String cfgStateUrl;    // derived: .../api/public/state
-static String cfgClaimUrl;    // .../api/public/claim
+static String cfgToken;       // per-device bearer token, issued by /register
 static String cfgHostname;    // WiFi hostname shown in router
 
+// Endpoint URLs, derived from API_BASE_URL in loadConfig()
+static String cfgRegisterUrl;
+static String cfgIngest;
+static String cfgConfigUrl;
+static String cfgStateUrl;
+
+// True once the server has accepted our token (device approved on dashboard)
+static bool deviceApproved = false;
+
 // Timing trackers — initialized in setup() to prevent double-fire
-static unsigned long lastPost   = 0;
-static unsigned long lastConfig = 0;
-static unsigned long lastState  = 0;
+static unsigned long lastPost     = 0;
+static unsigned long lastConfig   = 0;
+static unsigned long lastState    = 0;
+static unsigned long lastNtpRetry = 0;
 
 // WiFi reconnect state
 static unsigned long wifiReconnectDelay   = WIFI_RECONNECT_BASE_MS;
@@ -226,15 +237,12 @@ static void updateLed() {
     case LED_PORTAL:
       blink(150);
       break;
-
     case LED_CONNECTING:
       blink(600);
       break;
-
     case LED_ONLINE:
       digitalWrite(STATUS_LED_PIN, HIGH);
       break;
-
     case LED_ERROR: {
       // Triple-flash pattern: on-off-on-off-on-off then long pause
       static constexpr unsigned long steps[] = {100, 100, 100, 100, 100, 700};
@@ -287,7 +295,6 @@ static void tearDownSensors() {
 
 static void applySensor(int i) {
   Sensor& s = sensors[i];
-
   if ((s.kind == "dht22" || s.kind == "dht11") && s.pin >= 0) {
     uint8_t dhtType = (s.kind == "dht11") ? DHT11 : DHT22;
     s.dht = new DHT(s.pin, dhtType);
@@ -406,20 +413,18 @@ static void setupWatchdog() {
     .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
     .trigger_panic = true,
   };
-
   esp_err_t initResult = esp_task_wdt_init(&twdt_config);
   if (initResult == ESP_ERR_INVALID_STATE) {
-    // Arduino core already initialized TWDT (typically with a 5s timeout).
-    // Reconfigure so our longer timeout takes effect — otherwise blocking
-    // TLS handshakes to the config endpoint will panic the loopTask.
-    esp_err_t reconf = esp_task_wdt_reconfigure(&twdt_config);
-    if (reconf != ESP_OK) {
-      LOG_WARN("wdt", "reconfigure failed: %d", reconf);
-    }
-  } else if (initResult != ESP_OK) {
-    LOG_WARN("wdt", "init failed: %d", initResult);
+    // The Arduino core already started the TWDT before setup() with its own
+    // short default timeout (~5s). Blocking HTTPS calls (TLS handshake +
+    // 10s HTTP timeout) can easily exceed that, which panics and reboots
+    // the board mid-request. Reconfigure the existing watchdog to our 30s
+    // timeout instead of silently keeping the 5s default.
+    initResult = esp_task_wdt_reconfigure(&twdt_config);
   }
-
+  if (initResult != ESP_OK) {
+    LOG_WARN("wdt", "init/reconfigure failed: %d", initResult);
+  }
   resumeLoopWatchdog();
 }
 
@@ -451,45 +456,16 @@ static void feedWatchdog() {
 
 static void loadConfig() {
   prefs.begin("voltwatch", true);
-  cfgIngest   = prefs.getString("ingest",   "");
-  cfgKey      = prefs.getString("key",      "");
+  cfgToken    = prefs.getString("token",    "");
   cfgHostname = prefs.getString("hostname", "");
   prefs.end();
 
-  const String defUrl   = String(DEFAULT_INGEST_URL);
-  const String defKey   = String(DEFAULT_INGEST_KEY);
-  const String defClaim = String(DEFAULT_CLAIM_URL);
-
-  if (cfgIngest.length() == 0 && !isPlaceholder(defUrl)) cfgIngest = defUrl;
-  if (cfgKey.length()    == 0 && !isPlaceholder(defKey)) cfgKey    = defKey;
-
-  // Auto-migrate: ".lovableproject.com" serves SPA HTML, not API routes.
-  // Rewrite to the stable project host that serves /api/public/*.
-  if (cfgIngest.indexOf("lovableproject.com") >= 0 && !isPlaceholder(defUrl)) {
-    LOG_WARN("cfg", "migrating stored ingest URL '%s' -> '%s'",
-             cfgIngest.c_str(), defUrl.c_str());
-    cfgIngest = defUrl;
-    prefs.begin("voltwatch", false);
-    prefs.putString("ingest", cfgIngest);
-    prefs.end();
-  }
-
-  // Derive config and state URLs from ingest URL
-  cfgConfigUrl = cfgIngest;
-  cfgStateUrl  = cfgIngest;
-  int slash = cfgConfigUrl.lastIndexOf('/');
-  if (slash > 0) {
-    String base = cfgConfigUrl.substring(0, slash);
-    cfgConfigUrl = base + "/config";
-    cfgStateUrl  = base + "/state";
-  }
-
-  // Claim URL: prefer baked-in default, else derive from ingest
-  if (!isPlaceholder(defClaim)) {
-    cfgClaimUrl = defClaim;
-  } else if (cfgIngest.length() > 0 && slash > 0) {
-    cfgClaimUrl = cfgIngest.substring(0, slash) + "/claim";
-  }
+  // All endpoints are fixed, derived from the compiled-in Supabase base URL.
+  const String base = String(API_BASE_URL);
+  cfgRegisterUrl = base + "/register";
+  cfgIngest      = base + "/ingest";
+  cfgConfigUrl   = base + "/config";
+  cfgStateUrl    = base + "/state";
 }
 
 // =============================================================================
@@ -506,6 +482,12 @@ static void syncNTP() {
              timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
   } else {
     LOG_WARN("ntp", "time sync failed — using uptime timestamps");
+    // CRITICAL: stop SNTP after a failed sync. If it keeps retrying in the
+    // background, its DNS retry timers race the HTTP client's DNS lookups
+    // from the loop task and trip an lwIP assert on core 3.x
+    // ("sys_untimeout ... Required to lock TCPIP core functionality!"),
+    // which panics and reboots the board. We retry NTP from loop() instead.
+    esp_sntp_stop();
   }
 }
 
@@ -516,24 +498,11 @@ static void syncNTP() {
 static void startConfigPortal(bool onDemand) {
   WiFiManager wm;
 
-  bool haveEndpoint = !isPlaceholder(String(DEFAULT_INGEST_URL));
-  bool haveKey      = !isPlaceholder(String(DEFAULT_INGEST_KEY));
-  bool haveClaim    = !isPlaceholder(String(DEFAULT_CLAIM_URL));
-  bool needEndpoint = !haveEndpoint;
-  bool needKey      = !haveKey;
-
-  WiFiManagerParameter pEndpoint("endpoint", "Ingest URL (https://.../api/public/ingest)",
-                                 cfgIngest.c_str(), 200);
-  WiFiManagerParameter pKey("key", "Device ingest key",
-                            cfgKey.c_str(), 80);
-  WiFiManagerParameter pCode("paircode", "Pairing code (6 digits, optional)", "", 8);
+  // WiFi + hostname only. No pairing codes and no keys — the device
+  // registers itself with the server using its MAC address, and you
+  // approve it once on the dashboard's Devices page.
   WiFiManagerParameter pHost("hostname", "Device hostname (e.g. voltwatch-kitchen)",
                              cfgHostname.c_str(), 32);
-  bool offerCode = haveClaim || needEndpoint;
-
-  if (needEndpoint) wm.addParameter(&pEndpoint);
-  if (needKey)      wm.addParameter(&pKey);
-  if (offerCode)    wm.addParameter(&pCode);
   wm.addParameter(&pHost);
 
   // ESP32 WiFi scans can briefly drop the SoftAP on some boards/cores.
@@ -640,10 +609,16 @@ static void startConfigPortal(bool onDemand) {
     ESP.restart();
   }
 
-  // Retrieve portal values
-  if (needEndpoint) cfgIngest = pEndpoint.getValue();
-  if (needKey)      cfgKey    = pKey.getValue();
+  // Shut down the setup hotspot completely before doing anything else.
+  // On-demand mode forces WIFI_AP_STA, and WiFiManager leaves the SoftAP
+  // running after the portal exits. A live AP holds 15KB+ of heap and the
+  // TLS handshake needs ~40KB free — without this, every HTTPS call after
+  // the portal (claim, config) fails with a bogus "connection refused".
+  WiFi.softAPdisconnect(true);
+  WiFi.mode(WIFI_STA);
+  delay(100);
 
+  // Retrieve portal values
   String newHost = sanitizeHostname(String(pHost.getValue()));
   if (newHost.length() > 0 && newHost != cfgHostname) {
     cfgHostname = newHost;
@@ -653,35 +628,10 @@ static void startConfigPortal(bool onDemand) {
 
   // Persist config
   prefs.begin("voltwatch", false);
-  prefs.putString("ingest",   cfgIngest);
-  prefs.putString("key",      cfgKey);
   prefs.putString("hostname", cfgHostname);
   prefs.end();
   LOG_INFO("cfg", "config saved to NVS");
 
-  // Re-derive dependent URLs after possible changes
-  cfgConfigUrl = cfgIngest;
-  cfgStateUrl  = cfgIngest;
-  int slash = cfgConfigUrl.lastIndexOf('/');
-  if (slash > 0) {
-    String base = cfgConfigUrl.substring(0, slash);
-    cfgConfigUrl = base + "/config";
-    cfgStateUrl  = base + "/state";
-  }
-
-  // If a pairing code was entered, always attempt claim — regardless of
-  // whether cfgKey already has a value (the old key might be stale/invalid).
-  String code = String(pCode.getValue());
-  code.trim();
-  if (offerCode && code.length() == 6) {
-    LOG_INFO("cfg", "attempting pairing claim with code '%s'", code.c_str());
-    if (claimWithCode(code)) {
-      LOG_INFO("cfg", "paired successfully — fetching initial config");
-      refreshConfigWithBackoff(MAX_RETRY_ATTEMPTS, "post-claim");
-    } else {
-      LOG_ERR("cfg", "pairing failed — code may be expired or already claimed");
-    }
-  }
   setLed(LED_ONLINE);
 }
 
@@ -694,7 +644,6 @@ static void handleWiFiReconnect() {
       wifiReconnectDelay = WIFI_RECONNECT_BASE_MS;
       wifiWasConnected = true;
       setLed(LED_ONLINE);
-
       // Sync time on reconnect if not yet synced
       if (!ntpSynced) syncNTP();
     }
@@ -719,30 +668,25 @@ static void handleWiFiReconnect() {
 }
 
 // =============================================================================
-// Pairing (claim) — exchange 6-digit code for ingest credentials
+// Device registration — announce our MAC, receive a device token (first boot)
 // =============================================================================
 
-static bool claimWithCode(const String& code) {
-  if (cfgClaimUrl.length() == 0) {
-    LOG_ERR("claim", "no claim URL configured");
-    return false;
-  }
+static bool registerDevice() {
   if (WiFi.status() != WL_CONNECTED) {
-    LOG_ERR("claim", "WiFi not connected");
+    LOG_ERR("register", "WiFi not connected");
     return false;
   }
 
   JsonDocument body;
-  body["code"]       = code;
+  body["mac"]        = WiFi.macAddress();
   body["fw_version"] = FW_VERSION;
-  body["fw_build"]   = FW_BUILD;
   String payload;
   serializeJson(body, payload);
 
   HTTPClient http;
   WiFiClientSecure tls;
-  LOG_INFO("claim", "POST %s", cfgClaimUrl.c_str());
-  beginHttp(http, tls, cfgClaimUrl);
+  LOG_INFO("register", "POST %s (mac %s)", cfgRegisterUrl.c_str(), WiFi.macAddress().c_str());
+  beginHttp(http, tls, cfgRegisterUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
   http.setTimeout(10000);
@@ -750,47 +694,40 @@ static bool claimWithCode(const String& code) {
   String resp = http.getString();
   http.end();
 
-  LOG_INFO("claim", "status %d, %d bytes", status, resp.length());
+  LOG_INFO("register", "status %d, %d bytes", status, resp.length());
+
   if (status != 200) {
-    LOG_ERR("claim", "server returned %d: %s", status, resp.c_str());
+    LOG_ERR("register", "server returned %d: %s", status, resp.substring(0, 200).c_str());
     return false;
   }
 
   JsonDocument doc;
   DeserializationError jerr = deserializeJson(doc, resp);
   if (jerr) {
-    LOG_ERR("claim", "bad JSON response: %s", jerr.c_str());
+    LOG_ERR("register", "bad JSON response: %s", jerr.c_str());
     return false;
   }
 
-  const char* url = doc["ingest_url"] | "";
-  const char* key = doc["ingest_key"] | "";
-  if (!*url || !*key) {
-    LOG_ERR("claim", "response missing ingest_url or ingest_key");
-    return false;
+  // The device token is only returned the FIRST time this MAC registers.
+  // On later calls the server just reports our current status.
+  const char* token  = doc["device_token"] | "";
+  const char* dstate = doc["status"] | "";
+
+  if (*token) {
+    cfgToken = String(token);
+    prefs.begin("voltwatch", false);
+    prefs.putString("token", cfgToken);
+    prefs.end();
+    LOG_INFO("register", "device token received and saved");
   }
 
-  cfgIngest = String(url);
-  cfgKey    = String(key);
-
-  // Re-derive dependent URLs
-  cfgConfigUrl = cfgIngest;
-  cfgStateUrl  = cfgIngest;
-  int s2 = cfgConfigUrl.lastIndexOf('/');
-  if (s2 > 0) {
-    String base = cfgConfigUrl.substring(0, s2);
-    cfgConfigUrl = base + "/config";
-    cfgStateUrl  = base + "/state";
+  if (String(dstate) == "approved") {
+    deviceApproved = true;
+  } else {
+    LOG_WARN("register", "device status '%s' — open the dashboard's Devices page and press Approve", dstate);
   }
 
-  // Persist new credentials
-  prefs.begin("voltwatch", false);
-  prefs.putString("ingest", cfgIngest);
-  prefs.putString("key",    cfgKey);
-  prefs.end();
-
-  LOG_INFO("claim", "credentials saved — ingest URL: %s", cfgIngest.c_str());
-  return true;
+  return cfgToken.length() > 0;
 }
 
 // =============================================================================
@@ -811,8 +748,14 @@ static void saveConfigDiag(const String& url, int status, const String& body, co
 
 // Returns true when a JSON config was fetched and parsed successfully.
 static bool refreshConfig() {
-  if (WiFi.status() != WL_CONNECTED || cfgConfigUrl.length() == 0) {
-    saveConfigDiag(cfgConfigUrl, 0, "", "wifi down or no URL");
+  if (WiFi.status() != WL_CONNECTED) {
+    saveConfigDiag(cfgConfigUrl, 0, "", "wifi down");
+    return false;
+  }
+
+  // First boot: no device token yet — register with the server first.
+  if (cfgToken.length() == 0 && !registerDevice()) {
+    saveConfigDiag(cfgRegisterUrl, 0, "", "registration failed — no token yet");
     return false;
   }
 
@@ -821,13 +764,10 @@ static bool refreshConfig() {
   LOG_INFO("config", "GET %s", cfgConfigUrl.c_str());
   beginHttp(http, tls, cfgConfigUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.addHeader("x-ingest-key", cfgKey);
+  http.addHeader("Authorization", "Bearer " + cfgToken);
   http.addHeader("x-fw-version", FW_VERSION);
-  http.addHeader("x-fw-build",   FW_BUILD);
   http.setTimeout(10000);
-  pauseLoopWatchdog();  // blocking TLS handshake can exceed WDT timeout
   int code = http.GET();
-  resumeLoopWatchdog();
 
   if (code <= 0) {
     LOG_ERR("config", "HTTP error: %s", http.errorToString(code).c_str());
@@ -840,20 +780,30 @@ static bool refreshConfig() {
   http.end();
 
   LOG_INFO("config", "status %d, %d bytes", code, body.length());
+
+  if (code == 401 || code == 403) {
+    deviceApproved = false;
+    LOG_WARN("config", "device not approved yet — open the dashboard's Devices page and press Approve");
+    saveConfigDiag(cfgConfigUrl, code, body, "awaiting approval");
+    return false;
+  }
+
   if (code != 200) {
     LOG_ERR("config", "non-200 response: %s", body.substring(0, 200).c_str());
     saveConfigDiag(cfgConfigUrl, code, body, "non-200");
     return false;
   }
 
-  // Detect SPA HTML served instead of JSON (wrong host / preview wrapper)
+  // A 200 from /config means the token is valid and the device is approved.
+  deviceApproved = true;
+
+  // Detect HTML served instead of JSON (wrong URL)
   String head = body.substring(0, 32);
   head.trim();
   head.toLowerCase();
   if (head.startsWith("<!doctype") || head.startsWith("<html")) {
-    LOG_ERR("config", "server returned HTML, not JSON — wrong host?");
-    LOG_ERR("config", "use https://project--<project-id>.lovable.app/api/public/config");
-    saveConfigDiag(cfgConfigUrl, code, body, "SPA HTML - wrong host");
+    LOG_ERR("config", "server returned HTML, not JSON — wrong URL?");
+    saveConfigDiag(cfgConfigUrl, code, body, "HTML - wrong URL");
     return false;
   }
 
@@ -892,6 +842,7 @@ static bool refreshConfig() {
       LOG_WARN("config", "MAX_SENSORS (%d) reached, ignoring remaining", MAX_SENSORS);
       break;
     }
+
     Sensor& out = sensors[sensorCount];
     out.id        = String((const char*)(s["id"] | ""));
     out.kind      = String((const char*)(s["kind"] | ""));
@@ -972,7 +923,7 @@ static bool refreshConfigWithBackoff(int maxAttempts, const char* reason) {
   }
 
   LOG_ERR("config", "FINAL FAILURE: could not load config after %d retries", maxAttempts);
-  LOG_ERR("config", "check: WiFi, ingest URL, ingest key, device pairing");
+  LOG_ERR("config", "check: WiFi, and that this device is approved on the dashboard's Devices page");
   LOG_ERR("config", "will keep retrying on the normal %lu ms schedule", CONFIG_INTERVAL_MS);
   setLed(LED_ERROR);
   return false;
@@ -990,8 +941,8 @@ static void applyRelayStates(const JsonDocument& doc) {
     const char* relayId = rel["id"] | "";
     const char* pinStr  = rel["pin"] | "";
     bool on = rel["on"] | false;
-    int pin = parsePin(pinStr);
 
+    int pin = parsePin(pinStr);
     if (pin < 0) continue;
 
     // Safety: only apply to pins we know belong to relay sensors
@@ -1003,6 +954,7 @@ static void applyRelayStates(const JsonDocument& doc) {
         break;
       }
     }
+
     if (!known) {
       // Also match by sensor ID if pin doesn't match (config may have changed)
       for (int i = 0; i < sensorCount; i++) {
@@ -1014,12 +966,14 @@ static void applyRelayStates(const JsonDocument& doc) {
         }
       }
     }
+
     if (!known || pin < 0) continue;
 
     pinMode(pin, OUTPUT);
     digitalWrite(pin, on ? HIGH : LOW);
     applied++;
   }
+
   if (applied > 0) {
     LOG_INFO("relay", "applied %d relay state(s)", applied);
   }
@@ -1041,7 +995,7 @@ static void pollRelayState() {
   WiFiClientSecure tls;
   beginHttp(http, tls, cfgStateUrl);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.addHeader("x-ingest-key", cfgKey);
+  http.addHeader("Authorization", "Bearer " + cfgToken);
   http.setTimeout(5000);
   int code = http.GET();
 
@@ -1124,9 +1078,8 @@ static void collectAndPost() {
   beginHttp(http, tls, cfgIngest);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.addHeader("Content-Type", "application/json");
-  http.addHeader("x-ingest-key", cfgKey);
+  http.addHeader("Authorization", "Bearer " + cfgToken);
   http.addHeader("x-fw-version", FW_VERSION);
-  http.addHeader("x-fw-build",   FW_BUILD);
   http.setTimeout(10000);
   int code = http.POST(body);
 
@@ -1138,7 +1091,6 @@ static void collectAndPost() {
 
   String resp = http.getString();
   http.end();
-
   LOG_INFO("post", "status %d, %d bytes resp", code, resp.length());
 
   if (code == 200) {
@@ -1162,7 +1114,6 @@ static void collectAndPost() {
 void setup() {
   Serial.begin(115200);
   delay(200);
-
   Serial.println();
   Serial.println("=== Voltwatch ESP32 ===");
   Serial.printf("FW %s  built %s\n", FW_VERSION, FW_BUILD);
@@ -1201,12 +1152,15 @@ void setup() {
     startConfigPortal(false);
   }
 
-  // Sync NTP time after WiFi connects
+  // After WiFi connects: fetch config FIRST, then start NTP. If SNTP is
+  // started first and its sync fails (common on laptop hotspots that block
+  // NTP's UDP port), its background DNS retries race the HTTPS request's
+  // DNS lookup and crash the board (lwIP sys_untimeout assert).
   if (WiFi.status() == WL_CONNECTED) {
     wifiWasConnected = true;
-    syncNTP();
     // Initial config fetch with retry
     refreshConfigWithBackoff(MAX_RETRY_ATTEMPTS, "boot");
+    syncNTP();
   } else {
     setLed(LED_ERROR);
   }
@@ -1214,9 +1168,10 @@ void setup() {
   // Initialize timing to current millis() to prevent immediate double-fire.
   // setup() already fetched config and hasn't posted yet, so these prevent
   // the first loop() iteration from re-fetching immediately.
-  lastPost   = millis();
-  lastConfig = millis();
-  lastState  = millis();
+  lastPost     = millis();
+  lastConfig   = millis();
+  lastState    = millis();
+  lastNtpRetry = millis();
 
   LOG_INFO("setup", "initialization complete — entering main loop");
   LOG_INFO("heap", "free: %u bytes", ESP.getFreeHeap());
@@ -1243,6 +1198,13 @@ void loop() {
 
   // Active WiFi reconnection
   handleWiFiReconnect();
+
+  // Retry NTP occasionally until it syncs (SNTP is stopped after each
+  // failed attempt, so it never races the HTTP client's DNS lookups)
+  if (!ntpSynced && millis() - lastNtpRetry >= NTP_RETRY_INTERVAL_MS) {
+    lastNtpRetry = millis();
+    if (WiFi.status() == WL_CONNECTED) syncNTP();
+  }
 
   // Periodic config refresh
   if (millis() - lastConfig >= CONFIG_INTERVAL_MS) {
