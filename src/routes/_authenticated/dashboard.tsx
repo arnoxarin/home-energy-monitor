@@ -985,21 +985,31 @@ function SortableSensorGrid({
         : { w: 3, h: 3 };
   };
 
-  const [layout, setLayout] = useState<Layout[]>(() => {
-    if (typeof window === "undefined") return [];
+  const [layout, setLayout] = useState<Layout[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Read the saved layout AFTER hydration — reading localStorage in the
+  // useState initializer produced a server/client mismatch that crashed the
+  // dashboard on navigation ("This page didn't load").
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(storageKey);
-      return raw ? (JSON.parse(raw) as Layout[]) : [];
+      if (raw) setLayout(JSON.parse(raw) as Layout[]);
     } catch {
-      return [];
+      /* ignore */
     }
-  });
+    setHydrated(true);
+  }, [storageKey]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (!hydrated) return;
+    try {
       window.localStorage.setItem(storageKey, JSON.stringify(layout));
+    } catch {
+      /* ignore */
     }
-  }, [layout, storageKey]);
+  }, [layout, storageKey, hydrated]);
+
 
   // Drop layout entries for sensors that no longer exist (e.g. after a delete)
   // so the leftover slot doesn't linger and vertical compaction can pull the
