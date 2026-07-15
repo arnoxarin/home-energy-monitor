@@ -61,8 +61,6 @@ function DevicesPage() {
   });
 
   const devices = devicesQ.data ?? [];
-  const mine = devices.filter((d) => d.status !== "pending" || d.user_id);
-  const pending = devices.filter((d) => d.status === "pending" && !d.user_id);
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -81,35 +79,20 @@ function DevicesPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-8 space-y-8">
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Pending approval
-          </h2>
-          {devicesQ.isLoading ? (
-            <p className="text-muted-foreground">Loading…</p>
-          ) : pending.length === 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">No devices waiting</CardTitle>
-                <CardDescription>
-                  Flash your ESP32 and it will register itself here automatically. Approve it to
-                  bind it to your account.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          ) : (
-            pending.map((d) => <PendingDeviceRow key={d.id} device={d} />)
-          )}
-        </section>
+        <ClaimDeviceCard />
 
         <section className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Your devices
           </h2>
-          {mine.length === 0 ? (
-            <p className="text-sm text-muted-foreground">You haven't approved any devices yet.</p>
+          {devicesQ.isLoading ? (
+            <p className="text-muted-foreground">Loading…</p>
+          ) : devices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              You haven't claimed any devices yet. Flash your ESP32, then enter its MAC above.
+            </p>
           ) : (
-            mine.map((d) => <DeviceRow key={d.id} device={d} />)
+            devices.map((d) => <DeviceRow key={d.id} device={d} />)
           )}
         </section>
       </main>
@@ -117,69 +100,64 @@ function DevicesPage() {
   );
 }
 
-function PendingDeviceRow({ device }: { device: Device }) {
+function ClaimDeviceCard() {
   const qc = useQueryClient();
+  const [mac, setMac] = useState("");
 
-  const approve = useMutation({
+  const claim = useMutation({
     mutationFn: async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("Not signed in");
-      const { error } = await supabase
-        .from("devices")
-        .update({ user_id: userData.user.id, status: "approved" })
-        .eq("id", device.id);
+      const { data, error } = await supabase.rpc("claim_device", { _mac: mac });
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["devices"] });
-      toast.success("Device approved");
+      toast.success("Device claimed");
+      setMac("");
     },
-    onError: (e) => toast.error((e as Error).message),
-  });
-
-  const block = useMutation({
-    mutationFn: async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("Not signed in");
-      const { error } = await supabase
-        .from("devices")
-        .update({ user_id: userData.user.id, status: "blocked" })
-        .eq("id", device.id);
-      if (error) throw error;
+    onError: (e) => {
+      const msg = (e as Error).message;
+      toast.error(
+        msg.includes("no pending device")
+          ? "No pending device with that MAC. Make sure the ESP32 is powered on and connected to WiFi."
+          : msg,
+      );
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["devices"] });
-      toast.success("Device blocked");
-    },
-    onError: (e) => toast.error((e as Error).message),
   });
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-        <div>
-          <CardTitle className="text-base flex items-center gap-2">
-            {device.name || device.mac}
-            <Badge variant="outline">pending</Badge>
-          </CardTitle>
-          <CardDescription>
-            MAC <code className="font-mono">{device.mac}</code>
-            {device.fw_version ? <> · fw {device.fw_version}</> : null}
-            {device.last_seen ? <> · registered {new Date(device.last_seen).toLocaleString()}</> : null}
-          </CardDescription>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => approve.mutate()} disabled={approve.isPending}>
-            <Check className="mr-1 h-4 w-4" /> Approve
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => block.mutate()} disabled={block.isPending}>
-            <Ban className="mr-1 h-4 w-4" /> Block
-          </Button>
-        </div>
+      <CardHeader>
+        <CardTitle className="text-base">Claim a new device</CardTitle>
+        <CardDescription>
+          Flash your ESP32 and let it connect to WiFi. Then enter its MAC address (printed on the
+          board, or shown in your router) to bind it to your account.
+        </CardDescription>
       </CardHeader>
+      <CardContent>
+        <form
+          className="flex flex-col gap-2 sm:flex-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (mac.trim()) claim.mutate();
+          }}
+        >
+          <Input
+            placeholder="AA:BB:CC:DD:EE:FF"
+            value={mac}
+            onChange={(e) => setMac(e.target.value)}
+            className="font-mono sm:max-w-xs"
+            autoComplete="off"
+          />
+          <Button type="submit" disabled={!mac.trim() || claim.isPending}>
+            <Check className="mr-1 h-4 w-4" /> Claim device
+          </Button>
+        </form>
+      </CardContent>
     </Card>
   );
 }
+
 
 function DeviceRow({ device }: { device: Device }) {
   const qc = useQueryClient();
