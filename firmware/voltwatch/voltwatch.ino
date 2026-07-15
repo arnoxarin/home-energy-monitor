@@ -219,7 +219,21 @@ static void setLed(int s) {
   ledState = static_cast<LedState>(s);
 }
 
+// If the user configured a relay sensor on the same GPIO as the onboard
+// status LED (very common — GPIO2 is both), the LED loop keeps forcing that
+// pin HIGH every few ms. That's why toggling the relay OFF from the
+// dashboard appeared to do nothing. When a relay owns the pin, hand it
+// over completely — the relay code will drive it.
+static bool statusLedOwnedByRelay() {
+  for (int i = 0; i < sensorCount; i++) {
+    if (sensors[i].kind == "relay" && sensors[i].pin == STATUS_LED_PIN) return true;
+  }
+  return false;
+}
+
 static void updateLed() {
+  if (statusLedOwnedByRelay()) return;
+
   static unsigned long lastToggle = 0;
   static bool on = false;
   static int pulseIdx = 0;
@@ -255,6 +269,7 @@ static void updateLed() {
     }
   }
 }
+
 
 // =============================================================================
 // Dynamic sensor table
