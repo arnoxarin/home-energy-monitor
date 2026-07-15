@@ -134,7 +134,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_device: {
+        Args: { _mac: string }
+        Returns: {
+          created_at: string
+          device_token: string | null
+          fw_version: string | null
+          id: string
+          last_seen: string | null
+          mac: string
+          name: string | null
+          status: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "devices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       sensor_kind:
